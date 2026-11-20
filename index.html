@@ -1318,6 +1318,12 @@
                         <option value="always">一律附加</option>
                         <option value="off">不附加</option>
                     </select>
+                    <p class="field-hint">附加內容含：離線可安裝（manifest＋Service Worker）、安裝教學頁與 QR Code、GitHub Pages 自動推送與驗收清單。</p>
+                </div>
+                <div class="field-group">
+                    <label for="deployRepoInput" class="field-label">GitHub 部署目標（選填）</label>
+                    <input id="deployRepoInput" type="text" class="field-input" placeholder="帳號/repo，例如 mathedu-prog/prompt-engine" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <p class="field-hint">填入後，提示詞會帶入正式網址與推送目標；留白則以占位符呈現。</p>
                 </div>
             </div>
 
@@ -1749,6 +1755,7 @@
                     if (typeof s.task === "string") this.dom.taskInput.value = s.task;
                     if (typeof s.role === "string") this.dom.customRoleInput.value = s.role;
                     if (typeof s.extra === "string") this.dom.extraConstraintsInput.value = s.extra;
+                    if (typeof s.deployRepo === "string") this.dom.deployRepoInput.value = s.deployRepo;
                     if (typeof s.style === "string") {
                         const has = Array.from(this.dom.outputStyleSelect.options).some((o) => o.value === s.style);
                         if (has && this.styleManual) this.dom.outputStyleSelect.value = s.style;
@@ -1768,6 +1775,7 @@
                         task: this.dom.taskInput.value,
                         role: this.dom.customRoleInput.value,
                         extra: this.dom.extraConstraintsInput.value,
+                        deployRepo: this.dom.deployRepoInput.value,
                         style: this.dom.outputStyleSelect.value,
                         styleManual: this.styleManual
                     };
@@ -1789,7 +1797,7 @@
                         "opticalCopyBtn", "copyBtnIcon", "copyBtnLabel", "saveToVaultBtn", "downloadBtn", "shareBtn", "atomRoleVal", "atomTaskVal",
                         "atomStyleVal", "atomFormatVal", "atomGuardVal", "atomList", "scoreCard", "scoreRingBar", "scoreNum", "scoreTier", "scoreHint",
                         "toggleDrawerBtn", "expertDrawerOverlay", "closeMobileDrawerBtn", "customRoleInput", "outputStyleSelect", "extraConstraintsInput",
-                        "styleAutoHint", "styleAutoBtn", "themeSeg", "soundSwitch", "pwaModeSelect", "vaultItemsList", "vaultCountBadge", "installPwaBtn", "installPwaBtnText",
+                        "styleAutoHint", "styleAutoBtn", "deployRepoInput", "themeSeg", "soundSwitch", "pwaModeSelect", "vaultItemsList", "vaultCountBadge", "installPwaBtn", "installPwaBtnText",
                         "pwaInstallGuideModal", "closePwaModalBtn", "confirmPwaModalBtn", "globalToast", "toastMsg", "toastAction"
                     ];
                     this.dom = {};
@@ -2081,14 +2089,32 @@
                     return false;
                 }
 
+                getDeployTarget() {
+                    const raw = (this.dom.deployRepoInput.value || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "").replace(/^\/+|\/+$/g, "");
+                    const m = raw.match(/^([\w.-]+)\/([\w.-]+)$/);
+                    if (m) return { repo: `${m[1]}/${m[2]}`, url: `https://${m[1]}.github.io/${m[2]}/` };
+                    return { repo: "使用者指定的 GitHub repo（帳號/repo）", url: "https://<帳號>.github.io/<repo>/" };
+                }
+
                 buildDefaultPwaPromptBlock() {
+                    const t = this.getDeployTarget();
                     return [
                         "",
-                        "# PWA 漸進式網頁應用程式標準配置 (Default PWA Architecture Spec)",
-                        "- **獨立 APP 化規範**：若本次任務涉及網頁、系統工具、互動介面或應用程式開發，必須內建完整 PWA（Progressive Web App）設定，確保使用者可直接安裝至手機主畫面（iOS Safari 與 Android Chrome）或電腦桌面當成獨立 APP 執行（display: standalone）。",
-                        "- **必備技術實作細節**：",
-                        "  1. 頁面標頭（head 區塊）必須包含 viewport-fit=cover、theme-color、apple-mobile-web-app-capable=\"yes\"、apple-mobile-web-app-status-bar-style 與 apple-mobile-web-app-title 標籤。",
-                        "  2. 配置完整 Web App Manifest（包含 name、short_name、start_url、display: standalone 及桌面圖示），並在支援環境下註冊輕量離線快取 Service Worker。"
+                        "# PWA 發佈與安裝規範 (PWA Delivery Spec)",
+                        "- **獨立 APP 化**：必須內建完整 PWA（display: standalone），可安裝至 iOS、Android 與電腦桌面。head 需含 viewport-fit=cover、theme-color、apple-mobile-web-app-capable=\"yes\"、apple-mobile-web-app-status-bar-style、apple-mobile-web-app-title 與 apple-touch-icon。",
+                        "- **離線可安裝**：",
+                        "  1. 提供 manifest.json（name、short_name、start_url 與 scope 使用相對路徑 \"./\"、display: standalone、background_color、theme_color，以及 192、512 與 maskable 512 三種 PNG 圖示）。",
+                        "  2. 提供 sw.js：以 VERSION 常數命名快取並預先快取核心檔案；頁面導覽採「網路優先、離線退回快取」，靜態資源採「先回快取、背景更新」；activate 時清除舊版快取；僅在 https 或 localhost 註冊。",
+                        "  3. 偵測到新版 Service Worker 時，畫面顯示「有新版本可用．立即更新」，點擊後以 postMessage(\"SKIP_WAITING\") 切換並自動重新載入。",
+                        "- **安裝教學頁與 QR Code**：",
+                        `  1. 產生 install.html，內含指向正式網址 ${t.url} 的 QR Code（內嵌 SVG，不依賴外部服務），並附「複製連結」「直接開啟」「列印此頁」按鈕。`,
+                        "  2. 教學頁分 iPhone／iPad（Safari：分享 → 加入主畫面）、Android（Chrome：選單 → 安裝應用程式）、電腦（Chrome／Edge：網址列安裝圖示）三種步驟，支援深色模式與手機版面。",
+                        "  3. 同時輸出 qr-install.png，並在主程式的「安裝 APP」說明視窗加入連結至教學頁。QR Code 必須實際解碼驗證，確認內容與正式網址完全一致。",
+                        "- **自動推送與部署（GitHub Pages）**：",
+                        `  1. 檔案結構：index.html 置於根目錄，與 manifest.json、sw.js、圖示、install.html 同層；Pages 來源設為 main 分支的 /(root)。目標 repo：${t.repo}。`,
+                        "  2. 若你具備 Git／GitHub 工具與推送權限，請直接 commit 並推送至上述 repo，等待 Pages 發布後回報線上網址與驗證結果；若無推送權限，改提供逐步操作指令，並明確指出需要使用者授權的地方。",
+                        "  3. 每次更新都必須同步遞增 sw.js 的 VERSION，確保已安裝的使用者能收到更新提示。",
+                        "- **驗收清單**：(a) 斷網後重新整理仍可開啟；(b) 瀏覽器顯示可安裝；(c) QR Code 掃描後開啟正確網址；(d) iOS 與 Android 安裝步驟與實際介面相符；(e) 新版推送後出現更新提示。"
                     ].join("\n");
                 }
 
@@ -2181,7 +2207,7 @@
                     ];
                     if (pairs.length) items.push({ ok: true, text: `已納入細部設定：${pairs.map((p) => `${p.label}＝${p.values.join("、")}`).join("；")}` });
                     else if ((FACETS[this.activeDomainId] || []).length) items.push({ ok: false, text: "建議在「細部設定」補選目標，可讓結果更精準" });
-                    if (this.needsPwa(rawTask)) items.push({ ok: true, text: "已判斷為開發類任務，附加 PWA 獨立 APP 配置規範" });
+                    if (this.needsPwa(rawTask)) items.push({ ok: true, text: "已判斷為開發類任務，附加「離線可安裝＋QR Code 教學頁＋GitHub 自動推送」發佈規範" });
                     if (Array.from(rawTask).length < 20 && !this.uploadedDraftAttachment) items.push({ ok: false, text: "任務描述偏短，補充對象與期望成果能顯著提升品質" });
 
                     this.dom.auditItemsList.innerHTML = items.map((it, i) =>
@@ -2610,6 +2636,7 @@
                     d.taskInput.addEventListener("input", () => { this.autosize(d.taskInput); onInput(); });
                     d.customRoleInput.addEventListener("input", onInput);
                     d.extraConstraintsInput.addEventListener("input", onInput);
+                    d.deployRepoInput.addEventListener("input", () => this.persist());
                     d.outputStyleSelect.addEventListener("change", () => { this.styleManual = true; this.autoPickStyle(); onInput(); });
                     d.styleAutoBtn.addEventListener("click", () => {
                         this.styleManual = false;

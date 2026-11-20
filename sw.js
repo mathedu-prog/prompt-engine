@@ -1,6 +1,6 @@
 /* AI 提示詞引擎 Service Worker
    更新版本時請調整 VERSION，使用者會看到「有新版本」提示。 */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "prompt-engine-" + VERSION;
 const CORE = ["./", "index.html", "install.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "qr-install.png"];
 
