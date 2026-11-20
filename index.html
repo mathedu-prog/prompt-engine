@@ -1,0 +1,2915 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#fafaf9">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="AI 提示詞引擎：多領域結構化提示詞生成工作台">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AI 提示詞引擎">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="AI 提示詞引擎">
+    <title>AI 提示詞引擎</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c1917'/%3E%3Cpath d='M32 10l4.5 15.5L52 32l-15.5 6.5L32 54l-4.5-15.5L12 32l15.5-6.5z' fill='%23f59e0b'/%3E%3C/svg%3E">
+    <script>
+        /* 於首次繪製前套用外觀，避免深色模式閃白 */
+        (function () {
+            try {
+                var s = JSON.parse(localStorage.getItem("prompt_studio_state_v3") || "{}");
+                var m = s.theme || "auto";
+                var dark = m === "dark" || (m === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+            } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+        })();
+    </script>
+    <style>
+        /* =========================================================================
+           100% 原生內建樣式系統（完全不依賴外部 CDN，離線與手機預覽皆完美呈現）
+           ========================================================================= */
+        :root {
+            --ambient-from: #ffffff;
+            --ambient-mid: #fafaf9;
+            --ambient-to: #f5f5f4;
+            --stone-900: #1c1917;
+            --stone-800: #292524;
+            --stone-700: #44403c;
+            --stone-600: #57534e;
+            --stone-500: #78716c;
+            --stone-400: #a8a29e;
+            --stone-300: #d6d3d1;
+            --stone-200: #e7e5e4;
+            --stone-100: #f5f5f4;
+            --stone-50: #fafaf9;
+            --amber-600: #d97706;
+            --amber-500: #f59e0b;
+            --amber-100: #fef3c7;
+            --amber-50: #fffbeb;
+            --indigo-600: #4f46e5;
+            --indigo-50: #eef2ff;
+            --emerald-600: #059669;
+            --emerald-50: #ecfdf5;
+            --rose-600: #e11d48;
+            --rose-50: #fff1f2;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", "Segoe UI", Roboto, sans-serif;
+            color: var(--stone-900);
+            background: radial-gradient(circle at 50% 0%, var(--ambient-from) 0%, var(--ambient-mid) 55%, var(--ambient-to) 100%);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 強制鎖定所有 SVG 向量圖示尺寸，防止在無 Tailwind 環境下放大 */
+        svg {
+            width: 15px;
+            height: 15px;
+            max-width: 24px;
+            max-height: 24px;
+            flex-shrink: 0;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .style-preview-box svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .duotone-fill {
+            fill: currentColor;
+            fill-opacity: 0.22;
+        }
+
+        .duotone-fill-amber {
+            fill: #d97706;
+            fill-opacity: 0.24;
+        }
+
+        .dyn-emoji-icon {
+            font-size: 14px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 頂部導覽列 */
+        .top-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: var(--glass-strong);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--stone-200);
+            padding: 10px 16px;
+        }
+
+        .header-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 9px;
+            background: var(--ink-bg);
+            color: var(--ink-fg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(28, 25, 23, 0.18);
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--stone-900);
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            color: var(--stone-500);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 11px;
+            border-radius: 999px;
+            background: var(--stone-100);
+            color: var(--stone-600);
+            border: 1px solid var(--stone-200);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--emerald-600);
+        }
+
+        /* 通用按鈕樣式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 7px 13px;
+            border-radius: 12px;
+            border: 1px solid var(--stone-200);
+            background: var(--surface);
+            color: var(--stone-700);
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+            text-decoration: none;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--stone-50);
+            border-color: var(--stone-300);
+            transform: translateY(-1px);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn-pwa-install {
+            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+            border-color: #d97706;
+            color: #fcd34d;
+            box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.25);
+        }
+
+        .btn-pwa-install:hover:not(:disabled) {
+            background: #d97706;
+            color: var(--ink-fg);
+        }
+
+        .btn-primary-dark {
+            background: var(--ink-bg);
+            border-color: var(--ink-bg);
+            color: var(--ink-fg);
+            padding: 11px 18px;
+            font-size: 13px;
+            border-radius: 14px;
+            box-shadow: 0 8px 18px -6px rgba(28, 25, 23, 0.35);
+        }
+
+        .btn-primary-dark:hover:not(:disabled) {
+            background: var(--stone-800);
+        }
+
+        .btn-amber-soft {
+            background: var(--amber-50);
+            border-color: var(--amber-line);
+            color: var(--amber-ink);
+            padding: 11px 16px;
+            font-size: 13px;
+            border-radius: 14px;
+        }
+
+        .btn-amber-soft:hover:not(:disabled) {
+            background: var(--amber-100);
+        }
+
+        .icon-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            border: 1px solid var(--stone-200);
+            background: var(--surface);
+            color: var(--stone-600);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* 主容器與領域切換列 */
+        .main-container {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 16px 16px 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .domain-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 6px;
+            background: var(--glass);
+            border: 1px solid var(--stone-200);
+            border-radius: 18px;
+        }
+
+        .domain-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--stone-600);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s ease;
+        }
+
+        .domain-tab:hover {
+            background: var(--surface);
+            color: var(--stone-900);
+        }
+
+        .domain-tab.is-active {
+            background: var(--ink-bg);
+            color: var(--ink-fg);
+            box-shadow: 0 4px 10px -2px rgba(28, 25, 23, 0.25);
+        }
+
+        /* 響應式雙欄工作區 */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        @media (min-width: 920px) {
+            .workspace-grid {
+                grid-template-columns: 1.45fr 1fr;
+            }
+        }
+
+        /* 暖調建築紙感卡片 */
+        .optical-card {
+            background: var(--glass-card);
+            border: 1px solid var(--stone-200);
+            border-radius: 22px;
+            padding: 18px;
+            box-shadow: 0 14px 32px -12px rgba(28, 25, 23, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .flex-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .domain-tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--amber-50);
+            color: var(--amber-ink-2);
+            border: 1px solid var(--amber-line);
+        }
+
+        /* 匯入抽屜區塊 */
+        .import-drawer {
+            background: var(--stone-50);
+            border: 1px dashed var(--stone-300);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .import-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 520px) {
+            .import-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .import-source-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 12px 8px;
+            border-radius: 14px;
+            border: 1px solid var(--stone-200);
+            background: var(--surface);
+            color: var(--stone-800);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.16s ease;
+        }
+
+        .import-source-btn:hover {
+            border-color: var(--amber-500);
+            background: var(--amber-50);
+        }
+
+        /* 6 大視覺與插圖風格縮圖選擇器 */
+        .icon-style-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 16px;
+            background: var(--stone-50);
+            border: 1px solid var(--stone-200);
+        }
+
+        .icon-style-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        @media (min-width: 600px) {
+            .icon-style-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        .icon-style-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 5px;
+            padding: 9px 6px;
+            border-radius: 13px;
+            border: 1.5px solid var(--stone-200);
+            background: var(--surface);
+            cursor: pointer;
+            transition: all 0.18s ease;
+            position: relative;
+        }
+
+        .icon-style-card:hover {
+            border-color: var(--stone-400);
+            transform: translateY(-1px);
+        }
+
+        .icon-style-card.is-selected {
+            border-color: var(--amber-600);
+            background: var(--amber-50);
+            box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.2);
+        }
+
+        .style-preview-box {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: var(--stone-100);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--stone-800);
+        }
+
+        .icon-style-card.is-selected .style-preview-box {
+            background: var(--surface);
+            color: var(--amber-600);
+        }
+
+        .style-card-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--stone-900);
+            line-height: 1.2;
+        }
+
+        .style-card-sub {
+            font-size: 9.5px;
+            color: var(--stone-500);
+            line-height: 1.2;
+        }
+
+        /* 輸入框與結果輸出框 */
+        .task-textarea, .result-textarea {
+            width: 100%;
+            border-radius: 16px;
+            border: 1.5px solid var(--stone-200);
+            background: var(--surface);
+            padding: 13px 14px;
+            font-size: 13.5px;
+            line-height: 1.65;
+            color: var(--stone-900);
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .task-textarea:focus, .result-textarea:focus {
+            outline: none;
+            border-color: var(--amber-600);
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.14);
+        }
+
+        .result-textarea {
+            background: var(--stone-50);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12.5px;
+            min-height: 230px;
+        }
+
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1.25fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 540px) {
+            .action-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 附件徽章 */
+        .attachment-pill {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: var(--indigo-50);
+            border: 1px solid var(--indigo-line);
+            font-size: 12px;
+            color: var(--indigo-600);
+        }
+
+        /* 查缺補漏面板 */
+        .audit-panel {
+            background: var(--amber-50);
+            border: 1px solid var(--amber-line);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .audit-item {
+            font-size: 12px;
+            color: var(--stone-700);
+            background: var(--surface);
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--amber-line);
+        }
+
+        /* 五維原子結構分解清單 */
+        .atom-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .atom-row {
+            padding: 10px 12px;
+            border-radius: 13px;
+            background: var(--stone-50);
+            border: 1px solid var(--stone-200);
+        }
+
+        .atom-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--stone-500);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 3px;
+        }
+
+        .atom-value {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--stone-900);
+            line-height: 1.45;
+        }
+
+        /* 專家參數抽屜 */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(28, 25, 23, 0.45);
+            backdrop-filter: blur(3px);
+            z-index: 60;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .drawer-panel {
+            width: 100%;
+            max-width: 390px;
+            height: 100%;
+            background: var(--surface);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: -12px 0 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stone-700);
+        }
+
+        .field-input, .field-select {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 11px;
+            border: 1px solid var(--stone-300);
+            font-size: 13px;
+            color: var(--stone-900);
+            background: var(--surface);
+        }
+
+        /* 收藏庫項目 */
+        .vault-item {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--stone-200);
+            background: var(--stone-50);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* PWA 安裝引導視窗 */
+        .pwa-guide-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(28, 25, 23, 0.55);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+
+        .pwa-guide-card {
+            background: var(--surface);
+            border: 1px solid var(--stone-200);
+            border-radius: 22px;
+            max-width: 420px;
+            width: 100%;
+            padding: 22px;
+            box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Toast 通知 */
+        .toast-bar {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--ink-bg);
+            color: var(--ink-fg);
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 999px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s ease;
+            z-index: 999;
+            max-width: 90vw;
+            text-align: center;
+        }
+
+        .toast-bar.is-visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    
+        /* =========================================================================
+           v3 質感強化層：深色模式 · 動效 · 手機安全區 · 無障礙
+           ========================================================================= */
+        :root {
+            color-scheme: light;
+            --tint: #fafaf9;
+            --ease: cubic-bezier(.22, 1, .36, 1);
+            --spring: cubic-bezier(.34, 1.56, .64, 1);
+            --toast-action: #fbbf24;
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --stone-900: #f5f5f4;
+            --stone-800: #e7e5e4;
+            --stone-700: #d6d3d1;
+            --stone-600: #b3ada8;
+            --stone-500: #8f8883;
+            --stone-400: #6f6963;
+            --stone-300: #4a4541;
+            --stone-200: #34302d;
+            --stone-100: #272321;
+            --stone-50: #201d1b;
+            --amber-600: #f59e0b;
+            --amber-500: #fbbf24;
+            --amber-100: rgba(245, 158, 11, .20);
+            --amber-50: rgba(245, 158, 11, .10);
+            --indigo-600: #a5b4fc;
+            --indigo-50: rgba(99, 102, 241, .14);
+            --emerald-600: #34d399;
+            --rose-600: #fb7185;
+            --surface: #1c1917;
+            --glass-strong: rgba(22, 20, 19, .78);
+            --glass: rgba(32, 29, 27, .70);
+            --glass-card: rgba(30, 27, 25, .86);
+            --ink-bg: #f5f5f4;
+            --ink-bg-hover: #e7e5e4;
+            --ink-fg: #1c1917;
+            --amber-ink: #fcd34d;
+            --amber-ink-2: #fbbf24;
+            --amber-line: rgba(245, 158, 11, .32);
+            --indigo-line: rgba(129, 140, 248, .35);
+            --toast-action: #b45309;
+            background: radial-gradient(circle at 50% -8%, color-mix(in srgb, var(--tint) 15%, #151210) 0%, #100e0d 68%);
+        }
+
+        :root {
+            --surface: #ffffff;
+            --glass-strong: rgba(255, 255, 255, .82);
+            --glass: rgba(255, 255, 255, .72);
+            --glass-card: rgba(255, 255, 255, .92);
+            --ink-bg: #1c1917;
+            --ink-bg-hover: #292524;
+            --ink-fg: #ffffff;
+            --amber-ink: #92400e;
+            --amber-ink-2: #b45309;
+            --amber-line: #fde68a;
+            --indigo-line: #c7d2fe;
+        }
+        html { min-height: 100%; -webkit-text-size-adjust: 100%; }
+        body {
+            background: transparent;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: env(safe-area-inset-bottom);
+            transition: color .3s ease;
+        }
+        button, input, select, textarea { font-family: inherit; touch-action: manipulation; }
+        :focus { outline: none; }
+        :focus-visible { outline: 2px solid var(--amber-600); outline-offset: 2px; }
+        ::selection { background: rgba(245, 158, 11, .28); }
+        * { scrollbar-width: thin; scrollbar-color: var(--stone-300) transparent; }
+        kbd {
+            font-family: inherit; font-size: 10.5px; border: 1px solid var(--stone-300);
+            border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--stone-600);
+        }
+
+        /* 啟動畫面（純 CSS 自動淡出，不依賴 JS） */
+        .splash {
+            position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 14px; background: #fafaf9;
+            animation: splashOut .5s .8s var(--ease) forwards;
+        }
+        :root[data-theme="dark"] .splash { background: #100e0d; }
+        .splash .brand-badge { width: 68px; height: 68px; border-radius: 22px; animation: splashPop .8s var(--spring) both; }
+        .splash .brand-badge svg { width: 32px; height: 32px; max-width: none; max-height: none; }
+        .splash-name { font-weight: 700; font-size: 15px; letter-spacing: .04em; color: var(--stone-900); animation: fadeUp .6s .15s var(--ease) both; }
+        .splash-bar { width: 84px; height: 3px; border-radius: 3px; background: var(--stone-200); overflow: hidden; }
+        .splash-bar::after { content: ""; display: block; height: 100%; width: 40%; background: var(--amber-600); border-radius: 3px; animation: splashBar .9s ease-in-out infinite; }
+        @keyframes splashOut { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+        @keyframes splashPop { from { opacity: 0; transform: scale(.6) rotate(-8deg); } }
+        @keyframes splashBar { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } }
+
+        /* 頂部列 */
+        .top-header { padding-top: calc(10px + env(safe-area-inset-top)); transition: box-shadow .25s ease, background .3s ease; }
+        .top-header.is-scrolled { box-shadow: 0 6px 24px -12px rgba(0, 0, 0, .28); }
+        .brand-badge { transition: transform .3s var(--spring); }
+        .brand-group:hover .brand-badge { transform: rotate(-8deg) scale(1.06); }
+        .brand-sub { letter-spacing: .02em; }
+
+        /* 按鈕手感 */
+        .btn { min-height: 34px; transition: background .18s ease, border-color .18s ease, transform .18s var(--ease), box-shadow .18s ease, color .18s ease; }
+        .btn:active:not(:disabled) { transform: scale(.97); }
+        .btn.is-busy { pointer-events: none; opacity: .85; }
+        .btn-primary-dark:hover:not(:disabled) { background: var(--ink-bg-hover); transform: translateY(-1px); box-shadow: 0 12px 22px -8px rgba(0, 0, 0, .4); }
+        .icon-btn { transition: transform .15s var(--ease), background .15s ease; color: var(--stone-600); }
+        .icon-btn:hover { background: var(--stone-100); }
+        .icon-btn:active { transform: scale(.92); }
+        .btn-copy { background: var(--ink-bg); color: var(--ink-fg); border-color: var(--ink-bg); }
+        .btn-copy:hover:not(:disabled) { background: var(--ink-bg-hover) !important; }
+        .btn-copy.is-done { background: var(--emerald-600); border-color: var(--emerald-600); color: #fff; }
+        .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (pointer: coarse) {
+            .btn { min-height: 42px; }
+            .icon-btn { width: 40px; height: 40px; }
+            .chip { padding: 9px 13px; }
+        }
+        @media (max-width: 700px) {
+            .status-pill, .brand-sub { display: none; }
+            .header-actions .btn-label { display: none; }
+            .header-actions .btn { padding: 8px 11px; }
+            .header-inner { flex-wrap: nowrap; }
+            .header-actions { flex-wrap: nowrap; }
+        }
+
+        /* 領域切換列：手機橫向捲動、桌面換行 */
+        .domain-bar { position: relative; }
+        .domain-tab { transition: background .2s ease, color .2s ease, transform .2s var(--ease), box-shadow .2s ease; white-space: nowrap; }
+        .domain-tab:active { transform: scale(.95); }
+        .domain-tab.is-active { transform: translateY(-1px); }
+        @media (max-width: 919px) {
+            .domain-bar {
+                flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+                -webkit-overflow-scrolling: touch; margin: 0 -16px; border-radius: 0; border-left: 0; border-right: 0; padding: 6px 16px;
+            }
+            .domain-bar::-webkit-scrollbar { display: none; }
+            .domain-tab { flex: 0 0 auto; scroll-snap-align: center; padding: 9px 14px; }
+        }
+
+        /* 進場與切換動畫 */
+        .rise { animation: rise .65s var(--ease) both; animation-delay: calc(var(--i, 0) * 80ms); }
+        @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+        .swap { animation: swap .42s var(--ease); }
+        @keyframes swap { from { opacity: 0; transform: translateY(7px); } }
+        .optical-card { transition: box-shadow .3s ease, border-color .3s ease, background .3s ease; position: relative; }
+        .optical-card.is-dragover { border-color: var(--amber-600); box-shadow: 0 0 0 4px rgba(245, 158, 11, .18), 0 14px 32px -12px rgba(28, 25, 23, .08); }
+        .drop-hint {
+            position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 8px;
+            border-radius: 22px; background: var(--glass-strong); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            font-weight: 700; color: var(--amber-ink); font-size: 14px; pointer-events: none;
+        }
+        .optical-card.is-dragover .drop-hint { display: flex; animation: fadeIn .15s ease; }
+        .drop-hint svg { width: 28px; height: 28px; max-width: none; max-height: none; }
+        @media (min-width: 920px) { .sticky-aside { position: sticky; top: 82px; } }
+
+        /* 領域標籤與等化器 */
+        .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+        .eq i { width: 2.5px; height: 35%; background: currentColor; border-radius: 1px; animation: eq .9s ease-in-out infinite; }
+        .eq i:nth-child(2) { animation-delay: -.3s; }
+        .eq i:nth-child(3) { animation-delay: -.6s; }
+        @keyframes eq { 50% { height: 100%; } }
+
+        /* 細部設定（Facets） */
+        .facets { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 16px; background: var(--stone-50); border: 1px solid var(--stone-200); }
+        .facet-label { font-size: 11.5px; font-weight: 700; color: var(--stone-700); margin-bottom: 6px; display: flex; gap: 6px; align-items: baseline; }
+        .facet-label small { font-weight: 500; color: var(--stone-500); font-size: 10.5px; }
+        .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip {
+            border: 1px solid var(--stone-200); background: var(--surface); color: var(--stone-700); font-size: 12px; font-weight: 600;
+            padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: all .18s var(--ease);
+        }
+        .chip:hover { border-color: var(--stone-400); transform: translateY(-1px); }
+        .chip:active { transform: scale(.95); }
+        .chip[aria-pressed="true"] { background: var(--amber-50); border-color: var(--amber-600); color: var(--amber-ink); box-shadow: 0 3px 10px -4px rgba(217, 119, 6, .45); }
+
+        /* 圖示風格（可收合） */
+        details.icon-style-section > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        details.icon-style-section > summary::-webkit-details-marker { display: none; }
+        details.icon-style-section > summary .chev { transition: transform .25s var(--ease); font-size: 10px; color: var(--stone-500); }
+        details.icon-style-section[open] > summary .chev { transform: rotate(180deg); }
+        details.icon-style-section[open] > summary { margin-bottom: 8px; }
+        .icon-style-card { transition: all .2s var(--ease); }
+        .icon-style-card:active { transform: scale(.95); }
+        .icon-style-card.is-selected { transform: translateY(-1px); }
+
+        /* 輸入區 */
+        .task-textarea { min-height: 112px; resize: none; }
+        .field-foot { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--stone-500); margin-top: 7px; font-variant-numeric: tabular-nums; }
+        .btn.is-listening { border-color: var(--rose-600); color: var(--rose-600); animation: pulseRing 1.3s ease-out infinite; }
+        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, .35); } 100% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); } }
+        .attachment-pill img { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; flex: none; }
+        .audit-item { animation: rise .45s var(--ease) both; animation-delay: calc(var(--i, 0) * 90ms); display: flex; gap: 8px; align-items: flex-start; }
+        .audit-item .mark { font-weight: 800; color: var(--emerald-600); flex: none; }
+        .audit-item.is-tip .mark { color: var(--amber-600); }
+
+        /* 輸出：雷射掃描串流 */
+        .result-wrap { position: relative; border-radius: 16px; overflow: hidden; }
+        .result-wrap .result-textarea { display: block; }
+        .result-wrap.is-streaming::after {
+            content: ""; position: absolute; left: 0; right: 0; top: 0; height: 70px; pointer-events: none;
+            background: linear-gradient(180deg, transparent, rgba(245, 158, 11, .20)); border-bottom: 1.5px solid rgba(245, 158, 11, .85);
+            animation: laser 1.1s linear infinite;
+        }
+        @keyframes laser { from { top: -70px; } to { top: 100%; } }
+        .result-wrap.is-done { animation: doneGlow .9s ease-out; }
+        @keyframes doneGlow { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, .5); } 100% { box-shadow: 0 0 0 16px rgba(245, 158, 11, 0); } }
+        .out-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--stone-500); font-variant-numeric: tabular-nums; }
+
+        /* 完整度圓環 */
+        .score-card { display: flex; align-items: center; gap: 16px; }
+        .ring { position: relative; width: 78px; height: 78px; flex: 0 0 78px; }
+        .ring svg { width: 78px; height: 78px; max-width: none; max-height: none; transform: rotate(-90deg); }
+        .ring-track { stroke: var(--stone-200); }
+        .ring-bar { stroke: var(--amber-600); transition: stroke-dashoffset .9s var(--ease), stroke .4s ease; }
+        .score-card.tier-3 .ring-bar { stroke: var(--emerald-600); }
+        .score-card.tier-0 .ring-bar { stroke: var(--stone-400); }
+        .ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 21px; font-variant-numeric: tabular-nums; color: var(--stone-900); }
+        .score-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .score-tier { font-size: 13px; font-weight: 800; color: var(--stone-900); }
+        .score-hint { font-size: 11.5px; line-height: 1.5; color: var(--stone-600); }
+        .atom-row { transition: border-color .25s ease, transform .25s var(--ease); }
+        .atom-row:hover { border-color: var(--stone-300); transform: translateX(2px); }
+
+        /* 抽屜／視窗動畫 */
+        .drawer-overlay, .pwa-guide-modal { animation: fadeIn .22s ease both; }
+        .drawer-panel { animation: slideIn .36s var(--ease) both; padding-bottom: calc(20px + env(safe-area-inset-bottom)); padding-top: calc(20px + env(safe-area-inset-top)); }
+        .pwa-guide-card { animation: popIn .36s var(--spring) both; }
+        .is-closing { animation: fadeOut .2s ease both !important; }
+        .is-closing .drawer-panel { animation: slideOut .2s ease both; }
+        .is-closing .pwa-guide-card { animation: popOut .2s ease both; }
+        @keyframes fadeIn { from { opacity: 0; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+        @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } }
+        @keyframes slideOut { to { transform: translateX(40px); opacity: 0; } }
+        @keyframes popIn { from { opacity: 0; transform: scale(.9) translateY(10px); } }
+        @keyframes popOut { to { opacity: 0; transform: scale(.95); } }
+        .field-input:focus, .field-select:focus { border-color: var(--amber-600); box-shadow: 0 0 0 3px rgba(217, 119, 6, .14); }
+        .drawer-section { border-top: 1px solid var(--stone-200); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+        .field-hint { font-size: 11px; color: var(--stone-500); line-height: 1.5; margin: 0; }
+
+        /* 分段控制與開關 */
+        .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 3px; background: var(--stone-100); border-radius: 12px; }
+        .seg button { border: none; background: transparent; padding: 8px 6px; border-radius: 9px; font-size: 12px; font-weight: 600; color: var(--stone-600); cursor: pointer; transition: all .2s var(--ease); display: inline-flex; gap: 5px; justify-content: center; align-items: center; }
+        .seg button[aria-pressed="true"] { background: var(--surface); color: var(--stone-900); box-shadow: 0 1px 5px rgba(0, 0, 0, .14); }
+        .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .switch { width: 46px; height: 28px; border-radius: 999px; border: none; background: var(--stone-300); position: relative; cursor: pointer; transition: background .25s ease; flex: none; }
+        .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, .28); transition: transform .3s var(--spring); }
+        .switch[aria-checked="true"] { background: var(--emerald-600); }
+        .switch[aria-checked="true"]::after { transform: translateX(18px); }
+
+        /* 收藏庫 */
+        .vault-item { transition: border-color .2s ease, transform .25s var(--ease); animation: rise .4s var(--ease) both; }
+        .vault-item:hover { border-color: var(--stone-300); }
+        .vault-meta { font-size: 10.5px; color: var(--stone-500); }
+        .vault-title { font-size: 12.5px; font-weight: 600; color: var(--stone-800); line-height: 1.45; }
+        .vault-preview {
+            font-size: 11.5px; color: var(--stone-600); white-space: pre-wrap; max-height: 160px; overflow: auto; line-height: 1.55;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface); border: 1px solid var(--stone-200); border-radius: 9px; padding: 9px;
+        }
+        .empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 12px; text-align: center; color: var(--stone-500); font-size: 12px; line-height: 1.55; }
+        .empty-state .empty-ico { width: 42px; height: 42px; border-radius: 14px; background: var(--stone-100); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--stone-500); }
+        .empty-state .empty-ico svg { width: 20px; height: 20px; }
+        .draft-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface); padding: 7px 10px; border-radius: 10px; border: 1px solid var(--stone-200); font-size: 12px; }
+        .draft-row span.t { font-weight: 600; color: var(--stone-800); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* PWA 說明卡 */
+        .pwa-step { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--stone-600); line-height: 1.6; }
+        .pwa-step strong { color: var(--stone-900); }
+        .pwa-box { display: flex; flex-direction: column; gap: 10px; background: var(--stone-50); padding: 12px; border-radius: 14px; border: 1px solid var(--stone-200); margin-bottom: 14px; }
+
+        /* Toast */
+        .toast-bar { display: flex; align-items: center; gap: 14px; bottom: calc(22px + env(safe-area-inset-bottom)); transition: opacity .3s ease, transform .4s var(--spring); }
+        .toast-bar.is-visible { pointer-events: auto; }
+        .toast-action { border: none; background: transparent; color: var(--toast-action); font-weight: 800; font-size: 12.5px; cursor: pointer; padding: 2px 0; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+        }
+        @media print { .splash, .top-header, .domain-bar, .toast-bar { display: none !important; } }
+    </style>
+</head>
+<body>
+
+    <!-- 啟動畫面（純 CSS 自動淡出） -->
+    <div id="splash" class="splash" aria-hidden="true">
+        <div class="brand-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" fill="#f59e0b" fill-opacity=".35"/></svg>
+        </div>
+        <div class="splash-name">AI 提示詞引擎</div>
+        <div class="splash-bar"></div>
+    </div>
+
+    <!-- 頂部導覽列 -->
+    <header id="appHeader" class="top-header">
+        <div class="header-inner">
+            <div class="brand-group">
+                <div class="brand-badge">
+                    <span data-dyn-icon="sparkles" aria-hidden="true"></span>
+                </div>
+                <div>
+                    <div class="brand-title">AI 提示詞引擎</div>
+                    <div class="brand-sub">OPTICAL ORIGAMI · PROMPT STUDIO PRO</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div id="fsmStatusBadge" role="status" aria-live="polite" class="status-pill">
+                    <span id="fsmStatusDot" class="status-dot"></span>
+                    <span id="fsmStatusLabel">狀態：就緒</span>
+                </div>
+
+                <button id="themeToggleBtn" type="button" class="icon-btn" aria-label="切換外觀：自動／淺色／深色" title="切換外觀">
+                    <span id="themeIcon" data-dyn-icon="auto" aria-hidden="true"></span>
+                </button>
+
+                <button id="installPwaBtn" type="button" aria-label="將 AI 提示詞引擎安裝至桌面當成獨立 APP" class="btn btn-pwa-install">
+                    <span data-dyn-icon="smartphone" aria-hidden="true"></span>
+                    <span id="installPwaBtnText" class="btn-label">安裝 APP</span>
+                </button>
+
+                <button id="toggleDrawerBtn" type="button" class="btn" aria-label="開啟專家參數、偏好設定與收藏庫">
+                    <span data-dyn-icon="sliders" aria-hidden="true"></span>
+                    <span class="btn-label">專家參數 & 收藏</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主工作台 -->
+    <main class="main-container">
+        <!-- 領域切換列 -->
+        <nav id="domainTabsBar" aria-label="領域切換" class="domain-bar rise"></nav>
+
+        <div class="workspace-grid">
+            <!-- 左側：提示詞建構矩陣 -->
+            <section id="workspaceLeft" class="optical-card rise" style="--i:1">
+                <div class="drop-hint">
+                    <span data-dyn-icon="download" aria-hidden="true"></span>
+                    <span>放開即可匯入圖片或草稿檔案</span>
+                </div>
+
+                <div class="flex-between" style="flex-wrap:wrap;">
+                    <div class="flex-row" style="flex-wrap:wrap;">
+                        <span id="activeDomainTag" class="domain-tag-chip">
+                            <span data-dyn-icon="sparkles" aria-hidden="true"></span>
+                            <span>01 · 通用全能</span>
+                        </span>
+                        <span id="domainTitleText" style="font-size:13px;font-weight:700;color:var(--stone-800);">全領域智能提示詞建構場域</span>
+                    </div>
+
+                    <div class="flex-row">
+                        <button id="fillExampleBtn" type="button" class="btn">
+                            <span data-dyn-icon="wand" aria-hidden="true"></span>
+                            <span>填入範例</span>
+                        </button>
+                        <button id="resetAllBtn" type="button" class="btn">
+                            <span data-dyn-icon="rotate" aria-hidden="true"></span>
+                            <span>重置</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p id="domainDescText" style="margin:0;font-size:12px;color:var(--stone-600);line-height:1.55;"></p>
+
+                <!-- 多模態匯入與語音工具列 -->
+                <div class="flex-row" style="flex-wrap:wrap;">
+                    <button id="toggleImportBtn" type="button" class="btn" aria-expanded="false" aria-controls="unifiedImportDrawer">
+                        <span data-dyn-icon="download" aria-hidden="true"></span>
+                        <span>匯入草稿 / 圖片 ▾</span>
+                    </button>
+                    <button id="voiceInputBtn" type="button" class="btn">
+                        <span data-dyn-icon="mic" aria-hidden="true"></span>
+                        <span id="voiceBtnLabel">語音口述</span>
+                    </button>
+                </div>
+
+                <!-- 統一匯入抽屜 -->
+                <div id="unifiedImportDrawer" class="import-drawer hidden">
+                    <div class="flex-between">
+                        <span style="font-size:12px;font-weight:700;color:var(--stone-800);">選擇匯入來源（亦可直接把檔案拖曳到此卡片）</span>
+                        <button id="closeImportBtn" type="button" class="icon-btn" aria-label="關閉匯入面板">
+                            <span data-dyn-icon="close" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="import-grid">
+                        <button id="pickImageBtn" type="button" class="import-source-btn">
+                            <span data-dyn-icon="image" aria-hidden="true"></span>
+                            <span>相簿 / 拍照</span>
+                        </button>
+                        <button id="pickFileBtn" type="button" class="import-source-btn">
+                            <span data-dyn-icon="file" aria-hidden="true"></span>
+                            <span>文件 / 程式碼</span>
+                        </button>
+                        <button id="saveCloudDraftBtn" type="button" class="import-source-btn">
+                            <span data-dyn-icon="cloud" aria-hidden="true"></span>
+                            <span>存入草稿庫</span>
+                        </button>
+                    </div>
+                    <input id="hiddenImageInput" type="file" accept="image/*" class="hidden">
+                    <input id="hiddenDocInput" type="file" accept=".txt,.md,.json,.csv,.html,.css,.js,.ts,.jsx,.tsx,.py,.java,.cpp,.xml,.yaml,.yml,.sql,.sh,.log,.gs,.cs,.gd,.lua" class="hidden">
+                    <div id="cloudDraftsContainer" style="display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+
+                <!-- 附件狀態 -->
+                <div id="attachmentBadge" class="attachment-pill hidden">
+                    <img id="attachmentThumb" class="hidden" alt="">
+                    <span id="attachmentLabel" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">已附加檔案</span>
+                    <button id="clearAttachmentBtn" type="button" style="border:none;background:transparent;color:var(--rose-600);font-weight:700;cursor:pointer;font-size:12px;flex:none;">移除 ✕</button>
+                </div>
+
+                <!-- 細部設定（依領域動態顯示） -->
+                <div id="facetsBox" class="facets hidden">
+                    <div id="facetsTitle" style="font-size:11.5px;font-weight:800;color:var(--stone-800);"></div>
+                    <div id="facetsBody" style="display:flex;flex-direction:column;gap:12px;"></div>
+                </div>
+
+                <!-- 視覺與插圖風格（可收合） -->
+                <details id="styleDetails" class="icon-style-section" open>
+                    <summary>
+                        <span style="font-size:11.5px;font-weight:700;color:var(--stone-800);display:inline-flex;align-items:center;gap:5px;">
+                            <span data-dyn-icon="palette" aria-hidden="true"></span>
+                            <span>全介面與生成圖示風格</span>
+                            <span class="chev">▼</span>
+                        </span>
+                        <span id="selectedStyleBadge" style="font-size:11px;font-weight:700;color:var(--amber-600);">已選：雙色層次風</span>
+                    </summary>
+                    <div id="iconStyleGrid" class="icon-style-grid"></div>
+                </details>
+
+                <!-- 核心任務輸入 -->
+                <div>
+                    <textarea id="taskInput" rows="4" class="task-textarea" aria-label="任務目標"
+                        placeholder="請輸入任務目標、修改需求，或點擊上方「匯入草稿 / 圖片」載入現有檔案…"></textarea>
+                    <div class="field-foot">
+                        <span id="taskCount">0 字</span>
+                        <span><kbd>⌘</kbd> <kbd>Enter</kbd> 快速生成</span>
+                    </div>
+                </div>
+
+                <!-- 雙引擎生成按鈕 -->
+                <div class="action-row">
+                    <button id="aiAuditBtn" type="button" class="btn btn-amber-soft">
+                        <span data-dyn-icon="brain" aria-hidden="true"></span>
+                        <span>AI 自動歸類查缺補漏</span>
+                    </button>
+                    <button id="laserGenerateBtn" type="button" class="btn btn-primary-dark">
+                        <span data-dyn-icon="zap" aria-hidden="true"></span>
+                        <span>啟動雷射掃描生成提示詞</span>
+                    </button>
+                </div>
+
+                <!-- AI 診斷結果 -->
+                <div id="auditResultBox" class="audit-panel hidden">
+                    <div class="flex-between">
+                        <span style="font-size:12px;font-weight:700;color:var(--amber-ink);">🔍 AI 結構診斷與自動補齊項目</span>
+                        <button id="closeAuditBtn" type="button" style="border:none;background:transparent;color:var(--amber-ink);font-size:11px;cursor:pointer;">收合</button>
+                    </div>
+                    <div id="auditItemsList" style="display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+
+                <!-- 輸出區 -->
+                <div id="outputSection" style="display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid var(--stone-200);">
+                    <div class="flex-between" style="flex-wrap:wrap;">
+                        <span style="font-size:12.5px;font-weight:700;color:var(--stone-900);display:inline-flex;align-items:center;gap:6px;">
+                            <span data-dyn-icon="terminal" aria-hidden="true"></span>
+                            <span>結構化專業提示詞輸出</span>
+                        </span>
+                        <div class="flex-row" style="flex-wrap:wrap;">
+                            <button id="saveToVaultBtn" type="button" class="btn">
+                                <span data-dyn-icon="star" aria-hidden="true"></span>
+                                <span>收藏</span>
+                            </button>
+                            <button id="downloadBtn" type="button" class="btn" aria-label="下載為 Markdown 檔案">
+                                <span data-dyn-icon="download" aria-hidden="true"></span>
+                                <span>.md</span>
+                            </button>
+                            <button id="shareBtn" type="button" class="btn hidden" aria-label="分享提示詞">
+                                <span data-dyn-icon="share" aria-hidden="true"></span>
+                                <span>分享</span>
+                            </button>
+                            <button id="opticalCopyBtn" type="button" class="btn btn-copy">
+                                <span id="copyBtnIcon" data-dyn-icon="copy" aria-hidden="true"></span>
+                                <span id="copyBtnLabel">一鍵複製</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="resultWrap" class="result-wrap">
+                        <textarea id="resultCode" rows="11" class="result-textarea" aria-label="生成的提示詞（可直接編輯）"
+                            placeholder="點擊上方生成按鈕後，此處將輸出完整結構化提示詞，生成後仍可直接編輯微調…"></textarea>
+                    </div>
+                    <div id="outStats" class="out-stats">尚未生成</div>
+                </div>
+            </section>
+
+            <!-- 右側：完整度＋五維原子結構 -->
+            <aside class="optical-card sticky-aside rise" style="--i:2">
+                <div id="scoreCard" class="score-card tier-0">
+                    <div class="ring" role="img" aria-label="提示詞完整度">
+                        <svg viewBox="0 0 78 78" fill="none" stroke-width="6" stroke-linecap="round">
+                            <circle class="ring-track" cx="39" cy="39" r="32"/>
+                            <circle id="scoreRingBar" class="ring-bar" cx="39" cy="39" r="32" stroke-dasharray="201.06" stroke-dashoffset="201.06"/>
+                        </svg>
+                        <div id="scoreNum" class="ring-num">0</div>
+                    </div>
+                    <div class="score-meta">
+                        <div style="font-size:10.5px;font-weight:700;color:var(--stone-500);letter-spacing:.04em;">提示詞完整度</div>
+                        <div id="scoreTier" class="score-tier">待補充</div>
+                        <div id="scoreHint" class="score-hint">輸入任務目標即可開始。</div>
+                    </div>
+                </div>
+
+                <div class="flex-between" style="border-top:1px solid var(--stone-100);padding-top:12px;">
+                    <div class="flex-row">
+                        <span data-dyn-icon="layers" aria-hidden="true"></span>
+                        <h2 style="margin:0;font-size:14px;font-weight:700;">五維原子結構即時分解</h2>
+                    </div>
+                    <span id="domainCodeLabel" style="font-size:11px;font-family:ui-monospace,monospace;color:var(--stone-500);">ATOM // 01</span>
+                </div>
+
+                <div id="atomList" class="atom-list">
+                    <div class="atom-row">
+                        <div class="atom-label">01 · AI 專家角色定位 (Role)</div>
+                        <div id="atomRoleVal" class="atom-value"></div>
+                    </div>
+                    <div class="atom-row">
+                        <div class="atom-label">02 · 核心任務意圖 (Objective)</div>
+                        <div id="atomTaskVal" class="atom-value" style="color:var(--stone-500);">等待輸入任務目標...</div>
+                    </div>
+                    <div class="atom-row">
+                        <div class="atom-label">03 · 視覺圖示與插圖規範 (Icon Style)</div>
+                        <div id="atomStyleVal" class="atom-value" style="color:var(--amber-600);"></div>
+                    </div>
+                    <div class="atom-row">
+                        <div class="atom-label">04 · 輸出格式與語氣 (Format & Tone)</div>
+                        <div id="atomFormatVal" class="atom-value"></div>
+                    </div>
+                    <div class="atom-row">
+                        <div class="atom-label">05 · 領域專屬防呆護欄 (Guardrails)</div>
+                        <div id="atomGuardVal" class="atom-value"></div>
+                    </div>
+                </div>
+
+                <div class="flex-between" style="border-top:1px solid var(--stone-100);padding-top:10px;font-size:11px;">
+                    <span style="color:var(--stone-500);">專屬防呆護欄</span>
+                    <span id="domainGuardrailRule" style="font-weight:700;text-align:right;"></span>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- 右側滑出：專家參數、偏好設定、收藏庫 -->
+    <div id="expertDrawerOverlay" class="drawer-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+        <div class="drawer-panel">
+            <div class="flex-between" style="border-bottom:1px solid var(--stone-200);padding-bottom:12px;">
+                <div class="flex-row">
+                    <span data-dyn-icon="sliders" aria-hidden="true"></span>
+                    <h3 id="drawerTitle" style="margin:0;font-size:15px;font-weight:700;">專家參數 · 偏好 · 收藏庫</h3>
+                </div>
+                <button id="closeMobileDrawerBtn" type="button" class="icon-btn" aria-label="關閉抽屜">
+                    <span data-dyn-icon="close" aria-hidden="true"></span>
+                </button>
+            </div>
+
+            <div class="field-group">
+                <label for="customRoleInput" class="field-label">自訂 AI 專家角色（留白則自動配對）</label>
+                <input id="customRoleInput" type="text" class="field-input" placeholder="例如：資深前端架構師、暢銷小說家...">
+            </div>
+
+            <div class="field-group">
+                <label for="outputStyleSelect" class="field-label">輸出格式與語氣偏好</label>
+                <select id="outputStyleSelect" class="field-select">
+                    <option value="結構化 Markdown 標題與條列式重點，邏輯清晰易讀">結構化 Markdown 標題＋條列重點</option>
+                    <option value="單一完整可運行程式碼檔案，附帶詳細繁體中文註解">單一完整可運行程式碼（零省略）</option>
+                    <option value="金字塔原理結論先行，精煉專業商務報告格式">結論先行・專業商務簡報風</option>
+                    <option value="畫面感十足的沉浸式敘事，注重感官與細節刻畫">沉浸式故事敘事・畫面感描寫</option>
+                    <option value="循序漸進的白話教學與生活比喻，附隨堂自我檢核題">白話教學＋生活比喻＋檢核題</option>
+                    <option value="多維度對比表格呈現利弊與風險，並附量化評分與明確可執行的決策建議（含優先順序與信心程度）">對比表格＋量化建議（決策分析）</option>
+                    <option value="遊戲製作規格文件：以表格列出動作／音訊資產清單（檔名、格式、時長、迴圈點），並附引擎整合步驟與可貼用的參數或程式碼">遊戲製作規格文件（資產清單＋引擎整合）</option>
+                </select>
+                <div class="flex-between" style="gap:10px;">
+                    <p id="styleAutoHint" class="field-hint">已依領域自動選用</p>
+                    <button id="styleAutoBtn" type="button" class="btn hidden" style="padding:3px 10px;font-size:11px;min-height:28px;flex:none;">恢復自動</button>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label for="extraConstraintsInput" class="field-label">額外限制條件或禁忌（選填）</label>
+                <input id="extraConstraintsInput" type="text" class="field-input" placeholder="例如：字數 800 字內、支援手機單手操作...">
+            </div>
+
+            <div class="drawer-section">
+                <span class="field-label">外觀</span>
+                <div id="themeSeg" class="seg" role="group" aria-label="外觀模式">
+                    <button type="button" data-theme-mode="auto" aria-pressed="true">自動</button>
+                    <button type="button" data-theme-mode="light" aria-pressed="false">淺色</button>
+                    <button type="button" data-theme-mode="dark" aria-pressed="false">深色</button>
+                </div>
+                <div class="switch-row">
+                    <div>
+                        <div class="field-label">介面音效</div>
+                        <p class="field-hint">輕柔的點擊與完成提示音（預設關閉）</p>
+                    </div>
+                    <button id="soundSwitch" type="button" class="switch" role="switch" aria-checked="false" aria-label="介面音效"></button>
+                </div>
+                <div class="field-group">
+                    <label for="pwaModeSelect" class="field-label">PWA 規範附加方式</label>
+                    <select id="pwaModeSelect" class="field-select">
+                        <option value="smart">智慧判斷（僅開發類任務附加）</option>
+                        <option value="always">一律附加</option>
+                        <option value="off">不附加</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="drawer-section">
+                <div class="flex-between">
+                    <span class="field-label">⭐ 已收藏的提示詞模板</span>
+                    <span id="vaultCountBadge" style="font-size:11px;color:var(--stone-500);">0 筆</span>
+                </div>
+                <div id="vaultItemsList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA 安裝引導視窗 -->
+    <div id="pwaInstallGuideModal" role="dialog" aria-modal="true" aria-labelledby="pwaModalTitle" class="pwa-guide-modal hidden">
+        <div class="pwa-guide-card">
+            <div class="flex-between" style="margin-bottom:12px;">
+                <div class="flex-row">
+                    <span data-dyn-icon="smartphone" style="color:var(--amber-600);" aria-hidden="true"></span>
+                    <h3 id="pwaModalTitle" style="margin:0;font-size:15px;font-weight:700;color:var(--stone-900);">將「AI 提示詞引擎」安裝到桌面</h3>
+                </div>
+                <button id="closePwaModalBtn" type="button" aria-label="關閉安裝說明視窗" class="icon-btn">
+                    <span data-dyn-icon="close" aria-hidden="true"></span>
+                </button>
+            </div>
+            <p style="margin:0 0 12px;font-size:12.5px;color:var(--stone-700);line-height:1.6;">
+                依照下方步驟加入主畫面，即可享受無網址列的全螢幕獨立 APP 體驗：
+            </p>
+            <div class="pwa-box">
+                <div class="pwa-step"><strong>🍎 iPhone / iPad（Safari）</strong><span>點擊底部「分享」圖示 ➔ 往下滑選「<strong>加入主畫面</strong>」➔ 點「新增」。</span></div>
+                <div class="pwa-step" style="border-top:1px dashed var(--stone-200);padding-top:10px;"><strong>🤖 Android（Chrome / Edge）</strong><span>點擊右上角「⋮」➔ 選「<strong>安裝應用程式</strong>」或「<strong>加到主畫面</strong>」。</span></div>
+                <div class="pwa-step" style="border-top:1px dashed var(--stone-200);padding-top:10px;"><strong>💻 電腦（Chrome / Edge）</strong><span>點擊網址列右側的「安裝」圖示即可建立獨立視窗。</span></div>
+            </div>
+            <button id="confirmPwaModalBtn" data-autofocus type="button" class="btn btn-primary-dark" style="width:100%;">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 全域 Toast -->
+    <div id="globalToast" role="status" aria-live="polite" class="toast-bar">
+        <span id="toastMsg">系統通知</span>
+        <button id="toastAction" type="button" class="toast-action" hidden></button>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            // =========================================================================
+            // 1. 多風格向量 SVG 圖示庫 ＋ 活力 Emoji 對應庫（支援即時全站換裝）
+            // =========================================================================
+            const SVG_ICONS = Object.freeze({
+                sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" class="duotone-fill-amber"/></svg>',
+                smartphone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" class="duotone-fill-amber"/><path d="M12 18h.01"/></svg>',
+                code: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="4" class="duotone-fill"/><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+                pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" class="duotone-fill"/></svg>',
+                briefcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" class="duotone-fill"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+                graduation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z" class="duotone-fill"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
+                chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>',
+                bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" class="duotone-fill-amber"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>',
+                sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>',
+                wand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h0"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>',
+                rotate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+                download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+                mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" class="duotone-fill"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+                image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" class="duotone-fill"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+                file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" class="duotone-fill"/><polyline points="14 2 14 8 20 8"/></svg>',
+                cloud: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" class="duotone-fill"/></svg>',
+                palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" class="duotone-fill-amber"/></svg>',
+                brain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" class="duotone-fill-amber"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>',
+                zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" class="duotone-fill-amber"/></svg>',
+                terminal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>',
+                star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" class="duotone-fill-amber"/></svg>',
+                copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" class="duotone-fill"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
+                layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" class="duotone-fill-amber"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+                close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+            });
+
+            const EMOJI_ICONS = Object.freeze({
+                sparkles: "✨",
+                smartphone: "📲",
+                code: "💻",
+                pen: "✍️",
+                briefcase: "💼",
+                graduation: "🎓",
+                chart: "📊",
+                bulb: "💡",
+                sliders: "🎛️",
+                wand: "🪄",
+                rotate: "↺",
+                download: "📥",
+                mic: "🎙️",
+                image: "🖼️",
+                file: "📄",
+                cloud: "☁️",
+                palette: "🎨",
+                brain: "🧠",
+                zap: "⚡",
+                terminal: "🧾",
+                star: "⭐",
+                copy: "📋",
+                layers: "🧬",
+                close: "✕"
+            });
+
+            // 6 大視覺圖示／插圖風格庫
+            const ICON_STYLES = [
+                {
+                    id: "lucide",
+                    name: "極簡線條風",
+                    sub: "Lucide 1.8px",
+                    previewSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+                    promptSpec: "全介面採用極簡單色向量線條圖示（Lucide / Heroicons 風格），統一 stroke-width=\"1.8\"、圓角端點，無雜亂填色。"
+                },
+                {
+                    id: "duotone",
+                    name: "雙色層次風",
+                    sub: "Duotone 疊色",
+                    previewSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#d97706" fill-opacity="0.28"/></svg>',
+                    promptSpec: "採用雙色層次向量圖示（Phosphor Duotone 風格），外框線條搭配 20%～25% 半透明品牌主色疊色填滿，提升商業軟體立體感。"
+                },
+                {
+                    id: "solid",
+                    name: "圓潤實心風",
+                    sub: "SF Symbols",
+                    previewSvg: '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+                    promptSpec: "採用高飽和度圓潤實心向量圖示（Apple SF Symbols Solid 風格），搭配俐落負空間鏤空，強化手機觸控辨識度。"
+                },
+                {
+                    id: "glass",
+                    name: "毛玻璃立體",
+                    sub: "Glass 3D",
+                    previewSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="14" rx="4" fill="#4f46e5" fill-opacity="0.25"/><rect x="7" y="7" width="14" height="14" rx="4" fill="#d97706" fill-opacity="0.3"/></svg>',
+                    promptSpec: "採用半透明毛玻璃微立體漸層向量圖示（Glassmorphism Soft 3D 風格），具備雙層磨砂光澤與柔和陰影。"
+                },
+                {
+                    id: "blueprint",
+                    name: "建築製圖風",
+                    sub: "Blueprint 1px",
+                    previewSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="4" width="16" height="16"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>',
+                    promptSpec: "採用建築技術製圖細線風格（Blueprint 1.1px 幾何直角線條），搭配十字準心與刻度點綴，呈現精密工程手稿美學。"
+                },
+                {
+                    id: "emoji",
+                    name: "活力 Emoji",
+                    sub: "Fluent 3D 表情",
+                    previewSvg: '<span style="font-size:18px;line-height:1;">🎨</span>',
+                    promptSpec: "全介面採用現代系統／Fluent 3D 彩色立體 Emoji 作為視覺功能插圖與標籤點綴，親和力十足且直覺易懂。"
+                }
+            ];
+
+            // 七大領域配置
+            const DOMAIN_CONFIGS = {
+                general: {
+                    id: "general",
+                    code: "01",
+                    iconKey: "sparkles",
+                    label: "通用全能",
+                    title: "全領域智能提示詞建構場域",
+                    desc: "自動補全角色設定、執行步驟、輸出格式與防呆護欄，支援多模態草稿匯入與一鍵生成。",
+                    defaultRole: "擁有 15 年實戰經驗的全領域資深生活與效率顧問",
+                    guardrailSummary: "結構完整 · 補齊風險提醒",
+                    guardrailDetails: "1. 採用結構化標題與條列式呈現，確保一目了然。\n2. 主動補齊新手容易遺漏的執行細節與風險提醒。",
+                    example: "幫我規劃一趟 4 天 3 夜的京都親子慢活自由行，包含地鐵與計程車省力交通建議、親子友善在地美食。",
+                    ambient: { from: "#ffffff", mid: "#fafaf9", to: "#f5f5f4" }
+                },
+                coding: {
+                    id: "coding",
+                    code: "02",
+                    iconKey: "code",
+                    label: "寫程式",
+                    title: "軟體工程與架構光學場域",
+                    desc: "內建防 AI 偷懶護欄，強制要求輸出 100% 完整可運行程式碼、PWA 桌面安裝支援與錯誤攔截。",
+                    defaultRole: "頂尖前端系統架構師與極致 UI/UX 互動設計師",
+                    guardrailSummary: "100% 完整代碼 · 預設 PWA 獨立安裝",
+                    guardrailDetails: "1. 必須輸出從頭到尾 100% 完整可運行的程式碼，嚴禁使用 // ... 略過其餘程式碼。\n2. 內建完整 try/catch 錯誤攔截、手機/桌面響應式排版（RWD）以及完整 PWA 設定（可直接安裝至手機主畫面當成獨立 APP）。",
+                    example: "開發一個單頁式番茄鐘專注計時器 Web App，具備倒數動畫、自訂休息時間、音效提醒與本機統計紀錄。",
+                    ambient: { from: "#f8fafc", mid: "#f1f5f9", to: "#e2e8f0" }
+                },
+                writing: {
+                    id: "writing",
+                    code: "03",
+                    iconKey: "pen",
+                    label: "創作小說",
+                    title: "長篇小說與故事敘事場域",
+                    desc: "內建世界觀一致性防崩壞、Show Don't Tell 畫面感描寫與章末懸念鉤子設計。",
+                    defaultRole: "白金級暢銷長篇小說家與世界觀架構師",
+                    guardrailSummary: "畫面感描寫 · 人物防崩壞 · 章末懸念",
+                    guardrailDetails: "1. 嚴格遵守 Show, Don't Tell 原則，透過動作、微表情與環境氛圍展現情緒。\n2. 維持角色性格與世界觀設定高度一致，章末設計強烈懸念鉤子。",
+                    example: "構思並撰寫一部賽博龐克結合東方道術的長篇小說第一章，主角是一名在地下城修理義肢的年輕道士。",
+                    ambient: { from: "#fffbeb", mid: "#fef3c7", to: "#fafaf9" }
+                },
+                business: {
+                    id: "business",
+                    code: "04",
+                    iconKey: "briefcase",
+                    label: "商業辦公",
+                    title: "高情商商務溝通與策略場域",
+                    desc: "採用金字塔原理結論先行，專精高情商談判書信、商業提案與專案匯報。",
+                    defaultRole: "世界 500 強企業資深公關與高情商商務溝通顧問",
+                    guardrailSummary: "結論先行 · 緩衝＋立場＋雙贏方案",
+                    guardrailDetails: "1. 採用金字塔原理結論先行，剔除冗長客套廢話。\n2. 針對敏感談判提供「緩衝語句＋核心底線＋雙贏替代方案」三段式表達。",
+                    example: "寫一封商業 Email，委婉拒絕老客戶要求打 7 折的請求，守住價格底線同時提出替代優惠方案。",
+                    ambient: { from: "#f8fafc", mid: "#f1f5f9", to: "#e2e8f0" }
+                },
+                learning: {
+                    id: "learning",
+                    code: "05",
+                    iconKey: "graduation",
+                    label: "學習複習",
+                    title: "費曼學習法與考點剖析場域",
+                    desc: "把艱澀知識轉化為生活故事比喻，並自動附上隨堂自我檢核題目。",
+                    defaultRole: "精通費曼學習法的金牌科普名師與教學設計師",
+                    guardrailSummary: "生活化比喻 · 知識樹 · 隨堂檢核題",
+                    guardrailDetails: "1. 凡出現專有名詞必須立刻附上「一句話白話翻譯＋生活案例比喻」。\n2. 講解結尾附上 3 題循序漸進的自我檢核小問題與詳解。",
+                    example: "用完全零基礎也能秒懂的生活比喻，向我解釋什麼是「人工智慧的 Transformer 注意力機制」。",
+                    ambient: { from: "#f0fdf4", mid: "#ecfdf5", to: "#f5f5f4" }
+                },
+                analysis: {
+                    id: "analysis",
+                    code: "06",
+                    iconKey: "chart",
+                    label: "數據分析",
+                    title: "邏輯決策與多維度對比場域",
+                    desc: "拒絕模稜兩可的廢話，強制輸出多維度對比表格、盲點預警與量化決策建議。",
+                    defaultRole: "華爾街級首席商業分析師與理性決策科學顧問",
+                    guardrailSummary: "對比表格 · 盲點預警 · 明確決策建議",
+                    guardrailDetails: "1. 優先使用 Markdown 對比表格呈現利弊權衡與短期/長期風險。\n2. 扮演魔鬼代言人找出潛在盲點，並給出明確可量化的決策建議。",
+                    example: "幫我用 SWOT 與商業畫布分析「社區型無人自助洗衣結合咖啡吧」的創業可行性與潛在風險。",
+                    ambient: { from: "#eef2ff", mid: "#f8fafc", to: "#f1f5f9" }
+                },
+                brainstorm: {
+                    id: "brainstorm",
+                    code: "07",
+                    iconKey: "bulb",
+                    label: "創意發想",
+                    title: "水平思考與爆款企劃場域",
+                    desc: "打破平庸老套點子，強制分三層次輸出「穩健實用型、跨界混搭型、瘋狂腦洞型」靈感。",
+                    defaultRole: "坎城創意節金獎得主與短影音病毒傳播操盤手",
+                    guardrailSummary: "三層次提案 · 拒絕老套陳腔濫調",
+                    guardrailDetails: "1. 嚴禁只給平庸標準答案，必須提供「安全實用、跨界創新、瘋狂腦洞」三種層次。\n2. 每個點子需包含吸睛標題、核心亮點與具體執行畫面。",
+                    example: "為一間「寵物美容店」發想 5 個適合拍成 Reels 短影音的趣味企劃與前 3 秒吸睛開場。",
+                    ambient: { from: "#fffbeb", mid: "#fef9c3", to: "#fafaf9" }
+                }
+            };
+
+            // =========================================================================
+            // 1b. 擴充圖示與新領域：遊戲動畫配樂專家
+            // =========================================================================
+            const mk = (inner) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+            const ICONS = Object.assign({}, SVG_ICONS, {
+                gamepad: mk('<line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" class="duotone-fill-amber"/>'),
+                music: mk('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" class="duotone-fill"/><circle cx="18" cy="16" r="3" class="duotone-fill"/>'),
+                sun: mk('<circle cx="12" cy="12" r="4" class="duotone-fill-amber"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>'),
+                moon: mk('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" class="duotone-fill-amber"/>'),
+                auto: mk('<rect width="20" height="14" x="2" y="3" rx="2" class="duotone-fill"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'),
+                share: mk('<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/>'),
+                check: mk('<polyline points="20 6 9 17 4 12"/>'),
+                trash: mk('<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>')
+            });
+            const EMOJIS = Object.assign({}, EMOJI_ICONS, {
+                gamepad: "🎮", music: "🎵", sun: "☀️", moon: "🌙", auto: "🌗", share: "📤", check: "✅", trash: "🗑️"
+            });
+
+            DOMAIN_CONFIGS.gameaudio = {
+                id: "gameaudio",
+                code: "08",
+                iconKey: "gamepad",
+                label: "遊戲動畫配樂",
+                title: "遊戲動畫配樂專家場域",
+                desc: "以動畫 12 大原則與自適應音訊架構為核心，輸出可直接進引擎的動作分鏡、配樂企劃、音效清單與整合規格。",
+                defaultRole: "擁有 15 年 AAA 與獨立遊戲經驗的遊戲動畫總監暨互動音訊作曲家，精通 Spine、Unity、Unreal、Godot 與 FMOD／Wwise",
+                guardrailSummary: "動畫 12 原則 · 自適應配樂分層 · 混音與效能預算",
+                guardrailDetails: [
+                    "1. 動畫：落實 12 大動畫原則（預備、擠壓與拉伸、跟隨與重疊動作、慢入慢出）。每個動作必須標明幀數與 FPS、關鍵幀時間點、緩動曲線（cubic-bezier 或引擎曲線名稱）、狀態機轉換條件與可被打斷的視窗（cancel window）。",
+                    "2. 配樂：明確給出調性、BPM、拍號、和弦進行、配器編制與情緒曲線；採「水平重排＋垂直分層（stems）」的自適應架構，標示迴圈點（小節數）、過場 stinger 與交叉淡化秒數，並說明各遊戲狀態如何觸發切換。",
+                    "3. 音效與混音：每個音效拆成「衝擊／本體／尾韻」三層，提供音高與音量隨機化範圍以避免重複疲勞；列出整體響度目標（LUFS）、頻段分工、對白與音樂的側鏈閃避（ducking）規則與同時發聲數上限。",
+                    "4. 交付：以表格列出完整資產清單（命名規範、格式、取樣率、時長、是否迴圈），附引擎整合步驟與可直接貼用的參數或程式碼（Unity C#／GDScript／Web Audio 擇一，依指定引擎），並給出記憶體與 CPU 效能預算。"
+                ].join("\n"),
+                example: "為一款像素風 2D 動作 Roguelike 設計：主角「攻擊／受擊／死亡」的動畫分鏡（含幀數與緩動），以及隨戰鬥強度分層切換的自適應配樂與關鍵音效清單。",
+                ambient: { from: "#faf5ff", mid: "#f3e8ff", to: "#fafaf9" }
+            };
+
+            // 各領域細部設定（會被注入提示詞的「專案規格」區塊）
+            const FACETS = {
+                general: [
+                    { id: "tone", label: "回覆語氣", multi: false, options: ["親切自然", "專業嚴謹", "幽默輕鬆", "簡潔直接"] }
+                ],
+                coding: [
+                    { id: "platform", label: "目標平台", multi: false, options: ["網頁 / PWA", "Google Apps Script", "iOS", "Android", "桌面應用", "後端 API"] }
+                ],
+                writing: [
+                    { id: "genre", label: "故事類型", multi: true, options: ["奇幻", "科幻", "賽博龐克", "懸疑推理", "愛情", "仙俠武俠", "恐怖"] },
+                    { id: "pov", label: "敘事視角", multi: false, options: ["第一人稱", "第三人稱限知", "全知視角"] }
+                ],
+                business: [
+                    { id: "doc", label: "文件類型", multi: false, options: ["Email", "簡報大綱", "提案書", "會議紀錄", "談判腳本"] }
+                ],
+                learning: [
+                    { id: "level", label: "學習程度", multi: false, options: ["零基礎", "入門", "進階", "考前衝刺"] }
+                ],
+                analysis: [
+                    { id: "framework", label: "分析框架", multi: true, options: ["SWOT", "商業畫布", "波特五力", "財務試算", "風險矩陣"] }
+                ],
+                brainstorm: [
+                    { id: "channel", label: "應用情境", multi: true, options: ["Reels / TikTok", "YouTube", "實體活動", "產品命名", "品牌行銷"] }
+                ],
+                gameaudio: [
+                    { id: "scope", label: "專注範疇", multi: true, options: ["2D 角色動畫", "3D 動畫與動捕", "VFX 特效", "UI 動效", "過場演出", "配樂作曲", "音效設計 SFX", "自適應音訊"] },
+                    { id: "engine", label: "目標引擎／工具", multi: false, options: ["Unity", "Unreal Engine 5", "Godot 4", "Web（Canvas / Web Audio）", "Spine", "FMOD / Wwise"] },
+                    { id: "genre", label: "遊戲類型", multi: false, options: ["動作 Roguelike", "RPG", "益智休閒", "平台跳躍", "恐怖生存", "節奏音樂"] }
+                ]
+            };
+
+            // 無依賴的小工具
+            // 各領域預設的輸出格式（對應輸出格式選單的選項順序）
+            const DOMAIN_STYLE_INDEX = { general: 0, coding: 1, writing: 3, business: 2, learning: 4, analysis: 5, brainstorm: 0, gameaudio: 6 };
+            const STORE = { state: "prompt_studio_state_v3", vault: "prompt_studio_vault_v2", drafts: "prompt_studio_drafts_v2" };
+            const prefersReduced = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            const $ = (id) => document.getElementById(id);
+
+            // =========================================================================
+            // 1c. 介面音效（Web Audio 合成，無需任何音檔；預設關閉）
+            // =========================================================================
+            class UiSound {
+                constructor(isOn) { this.isOn = isOn; this.ctx = null; }
+                _ctx() {
+                    if (!this.ctx) {
+                        const AC = window.AudioContext || window.webkitAudioContext;
+                        if (!AC) return null;
+                        this.ctx = new AC();
+                    }
+                    if (this.ctx.state === "suspended") this.ctx.resume();
+                    return this.ctx;
+                }
+                tone(freq, start, dur, type, gain, endFreq) {
+                    const c = this._ctx();
+                    if (!c) return;
+                    const t = c.currentTime + start;
+                    const o = c.createOscillator();
+                    const g = c.createGain();
+                    o.type = type || "sine";
+                    o.frequency.setValueAtTime(freq, t);
+                    if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+                    g.gain.setValueAtTime(0.0001, t);
+                    g.gain.exponentialRampToValueAtTime(gain || 0.04, t + 0.012);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                    o.connect(g);
+                    g.connect(c.destination);
+                    o.start(t);
+                    o.stop(t + dur + 0.03);
+                }
+                play(name) {
+                    if (!this.isOn()) return;
+                    try {
+                        switch (name) {
+                            case "tap": this.tone(680, 0, 0.07, "triangle", 0.03); break;
+                            case "toggle": this.tone(520, 0, 0.07, "sine", 0.04); this.tone(780, 0.06, 0.09, "sine", 0.04); break;
+                            case "gen": this.tone(240, 0, 0.55, "sawtooth", 0.018, 1400); break;
+                            case "success": [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, i * 0.075, 0.24, "sine", 0.04)); break;
+                            case "warn": this.tone(210, 0, 0.18, "square", 0.02); break;
+                            case "chiptune": [392, 523.25, 659.25, 784, 1046.5].forEach((f, i) => this.tone(f, i * 0.06, 0.09, "square", 0.018)); break;
+                        }
+                    } catch (e) { /* 靜默 */ }
+                }
+            }
+
+            // =========================================================================
+            // 2. 應用程式主控制器
+            // =========================================================================
+            class PromptStudioApp {
+                constructor() {
+                    this.activeDomainId = "general";
+                    this.selectedIconStyleId = "duotone";
+                    this.themeMode = "auto";
+                    this.soundOn = false;
+                    this.pwaMode = "smart";
+                    this.styleManual = false;
+                    this.facetSel = {};
+                    this.layerStack = [];
+                    this.streamToken = 0;
+                    this.expandedVault = new Set();
+                    this.isListeningVoice = false;
+                    this.speechRecognition = null;
+                    this.uploadedImagePayload = null;
+                    this.uploadedDraftAttachment = null;
+                    this.deferredInstallPrompt = null;
+                    this.lastScore = 0;
+                    this.saved = this.loadFromStorage(STORE.state, {});
+                    this.savedPrompts = this.loadFromStorage(STORE.vault, []);
+                    this.cloudDrafts = this.loadFromStorage(STORE.drafts, [
+                        { id: "draft_demo_1", title: "個人記帳 Web App 草稿", content: "想做一個手機版個人每日記帳工具，要有分類圓餅圖與 CSV 匯出功能。" }
+                    ]);
+                    this.restoreState();
+
+                    this.cacheDom();
+                    this.sound = new UiSound(() => this.soundOn);
+                    this.hydrateInputs();
+                    this.initTheme();
+                    this.renderDomainTabs();
+                    this.renderIconStyleCards();
+                    this.applyDomainContext(this.activeDomainId, { silent: true });
+                    this.bindEvents();
+                    this.setupSpeechRecognition();
+                    this.renderVaultList();
+                    this.renderCloudDraftsList();
+                    this.initPwa();
+                    this.syncSettingsUi();
+                    if (window.matchMedia && window.matchMedia("(max-width: 600px)").matches) this.dom.styleDetails.open = false;
+                    if (navigator.share) this.dom.shareBtn.classList.remove("hidden");
+                    setTimeout(() => { const s = $("splash"); if (s) s.remove(); }, 1500);
+                }
+
+                // ---------- 狀態持久化 ----------
+                restoreState() {
+                    const s = this.saved || {};
+                    if (s.domain && DOMAIN_CONFIGS[s.domain]) this.activeDomainId = s.domain;
+                    if ("iconStyle" in s && (s.iconStyle === null || ICON_STYLES.some((x) => x.id === s.iconStyle))) this.selectedIconStyleId = s.iconStyle;
+                    if (["auto", "light", "dark"].includes(s.theme)) this.themeMode = s.theme;
+                    this.soundOn = !!s.sound;
+                    this.styleManual = !!s.styleManual;
+                    if (["smart", "always", "off"].includes(s.pwaMode)) this.pwaMode = s.pwaMode;
+                    if (s.facets && typeof s.facets === "object") this.facetSel = s.facets;
+                }
+
+                hydrateInputs() {
+                    const s = this.saved || {};
+                    if (typeof s.task === "string") this.dom.taskInput.value = s.task;
+                    if (typeof s.role === "string") this.dom.customRoleInput.value = s.role;
+                    if (typeof s.extra === "string") this.dom.extraConstraintsInput.value = s.extra;
+                    if (typeof s.style === "string") {
+                        const has = Array.from(this.dom.outputStyleSelect.options).some((o) => o.value === s.style);
+                        if (has && this.styleManual) this.dom.outputStyleSelect.value = s.style;
+                    }
+                    this.dom.pwaModeSelect.value = this.pwaMode;
+                    this.autosize(this.dom.taskInput);
+                }
+
+                snapshotState() {
+                    return {
+                        domain: this.activeDomainId,
+                        iconStyle: this.selectedIconStyleId,
+                        theme: this.themeMode,
+                        sound: this.soundOn,
+                        pwaMode: this.pwaMode,
+                        facets: this.facetSel,
+                        task: this.dom.taskInput.value,
+                        role: this.dom.customRoleInput.value,
+                        extra: this.dom.extraConstraintsInput.value,
+                        style: this.dom.outputStyleSelect.value,
+                        styleManual: this.styleManual
+                    };
+                }
+
+                persist() {
+                    clearTimeout(this._persistTimer);
+                    this._persistTimer = setTimeout(() => this.saveToStorage(STORE.state, this.snapshotState()), 300);
+                }
+
+                cacheDom() {
+                    const ids = [
+                        "appHeader", "fsmStatusLabel", "themeToggleBtn", "themeIcon", "domainTabsBar", "workspaceLeft", "activeDomainTag", "domainTitleText",
+                        "domainDescText", "domainCodeLabel", "domainGuardrailRule", "taskInput", "taskCount", "resultCode", "resultWrap", "outStats",
+                        "fillExampleBtn", "resetAllBtn", "toggleImportBtn", "unifiedImportDrawer", "closeImportBtn", "pickImageBtn", "pickFileBtn",
+                        "saveCloudDraftBtn", "hiddenImageInput", "hiddenDocInput", "cloudDraftsContainer", "attachmentBadge", "attachmentLabel",
+                        "attachmentThumb", "clearAttachmentBtn", "voiceInputBtn", "voiceBtnLabel", "iconStyleGrid", "selectedStyleBadge", "styleDetails",
+                        "facetsBox", "facetsTitle", "facetsBody", "aiAuditBtn", "laserGenerateBtn", "auditResultBox", "auditItemsList", "closeAuditBtn",
+                        "opticalCopyBtn", "copyBtnIcon", "copyBtnLabel", "saveToVaultBtn", "downloadBtn", "shareBtn", "atomRoleVal", "atomTaskVal",
+                        "atomStyleVal", "atomFormatVal", "atomGuardVal", "atomList", "scoreCard", "scoreRingBar", "scoreNum", "scoreTier", "scoreHint",
+                        "toggleDrawerBtn", "expertDrawerOverlay", "closeMobileDrawerBtn", "customRoleInput", "outputStyleSelect", "extraConstraintsInput",
+                        "styleAutoHint", "styleAutoBtn", "themeSeg", "soundSwitch", "pwaModeSelect", "vaultItemsList", "vaultCountBadge", "installPwaBtn", "installPwaBtnText",
+                        "pwaInstallGuideModal", "closePwaModalBtn", "confirmPwaModalBtn", "globalToast", "toastMsg", "toastAction"
+                    ];
+                    this.dom = {};
+                    ids.forEach((id) => { this.dom[id] = $(id); });
+                }
+
+                // ---------- 圖示系統 ----------
+                getUiIconHtml(key) {
+                    if (this.selectedIconStyleId === "emoji") {
+                        return `<span class="dyn-emoji-icon">${EMOJIS[key] || "✨"}</span>`;
+                    }
+                    return ICONS[key] || ICONS.sparkles;
+                }
+
+                applyAppThemeIcons(styleId, root) {
+                    const scope = root || document;
+                    const useEmoji = styleId === "emoji";
+                    const nodes = scope.querySelectorAll ? Array.from(scope.querySelectorAll("[data-dyn-icon]")) : [];
+                    if (scope.hasAttribute && scope.hasAttribute("data-dyn-icon")) nodes.push(scope);
+                    nodes.forEach((el) => {
+                        el.innerHTML = this.getUiIconHtml(el.getAttribute("data-dyn-icon"));
+                        if (useEmoji) return;
+                        const svg = el.querySelector("svg");
+                        if (!svg) return;
+                        const fills = svg.querySelectorAll(".duotone-fill, .duotone-fill-amber");
+                        const spec = {
+                            lucide: ["1.8", "0"], duotone: ["1.8", "0.24"], solid: ["2.3", "0.75"], glass: ["1.5", "0.35"], blueprint: ["1.15", "0.08"]
+                        }[styleId] || ["1.8", "0.24"];
+                        svg.setAttribute("stroke-width", spec[0]);
+                        fills.forEach((f) => f.setAttribute("fill-opacity", spec[1]));
+                    });
+                }
+
+                refreshIcons(root) { this.applyAppThemeIcons(this.selectedIconStyleId || "lucide", root); }
+
+                // ---------- 主題 ----------
+                resolveTheme() {
+                    if (this.themeMode !== "auto") return this.themeMode;
+                    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                }
+
+                initTheme() {
+                    this.applyTheme();
+                    if (window.matchMedia) {
+                        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+                        const h = () => { if (this.themeMode === "auto") this.applyTheme(); };
+                        if (mq.addEventListener) mq.addEventListener("change", h); else if (mq.addListener) mq.addListener(h);
+                    }
+                }
+
+                applyTheme() {
+                    const t = this.resolveTheme();
+                    document.documentElement.setAttribute("data-theme", t);
+                    const meta = document.querySelector('meta[name="theme-color"]');
+                    if (meta) meta.setAttribute("content", t === "dark" ? "#100e0d" : "#fafaf9");
+                    const key = this.themeMode === "auto" ? "auto" : (this.themeMode === "dark" ? "moon" : "sun");
+                    this.dom.themeIcon.setAttribute("data-dyn-icon", key);
+                    this.refreshIcons(this.dom.themeIcon);
+                    this.dom.themeSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeMode === this.themeMode)));
+                }
+
+                setThemeMode(mode, quiet) {
+                    this.themeMode = mode;
+                    this.applyTheme();
+                    this.persist();
+                    this.sound.play("toggle");
+                    if (!quiet) this.showToast({ auto: "外觀：跟隨系統", light: "外觀：淺色", dark: "外觀：深色" }[mode]);
+                }
+
+                syncSettingsUi() {
+                    this.dom.soundSwitch.setAttribute("aria-checked", String(this.soundOn));
+                    this.dom.pwaModeSelect.value = this.pwaMode;
+                }
+
+                // ---------- 領域 ----------
+                renderDomainTabs() {
+                    this.dom.domainTabsBar.setAttribute("role", "tablist");
+                    this.dom.domainTabsBar.innerHTML = Object.values(DOMAIN_CONFIGS).map((d) => {
+                        const on = d.id === this.activeDomainId;
+                        return `<button type="button" role="tab" aria-selected="${on}" data-domain-id="${d.id}" class="domain-tab${on ? " is-active" : ""}">
+                            <span data-dyn-icon="${d.iconKey}" aria-hidden="true"></span>
+                            <span>${this.escapeHtml(d.label)}</span>
+                        </button>`;
+                    }).join("");
+                }
+
+                renderIconStyleCards() {
+                    this.dom.iconStyleGrid.innerHTML = ICON_STYLES.map((st) => {
+                        const isSel = st.id === this.selectedIconStyleId;
+                        return `<button type="button" data-style-id="${st.id}" aria-pressed="${isSel}" class="icon-style-card${isSel ? " is-selected" : ""}">
+                            <div class="style-preview-box">${st.previewSvg}</div>
+                            <div class="style-card-name">${st.name}${isSel ? " ✓" : ""}</div>
+                            <div class="style-card-sub">${st.sub}</div>
+                        </button>`;
+                    }).join("");
+                    const found = ICON_STYLES.find((s) => s.id === this.selectedIconStyleId);
+                    this.dom.selectedStyleBadge.textContent = found ? `已選：${found.name}` : "未指定（預設標準）";
+                    this.dom.atomStyleVal.textContent = found ? `${found.name} (${found.sub})` : "系統預設極簡向量規範";
+                    this.setStatus(found ? `就緒 · ${found.name}` : "就緒");
+                }
+
+                setStatus(text) { this.dom.fsmStatusLabel.textContent = `狀態：${text}`; }
+
+                restartAnim(el, cls) {
+                    if (!el || prefersReduced()) return;
+                    el.classList.remove(cls);
+                    void el.offsetWidth;
+                    el.classList.add(cls);
+                }
+
+                applyDomainContext(domainId, opts) {
+                    const cfg = DOMAIN_CONFIGS[domainId];
+                    if (!cfg) return;
+                    const changed = this.activeDomainId !== domainId;
+                    this.activeDomainId = domainId;
+                    const root = document.documentElement.style;
+                    root.setProperty("--ambient-from", cfg.ambient.from);
+                    root.setProperty("--ambient-mid", cfg.ambient.mid);
+                    root.setProperty("--ambient-to", cfg.ambient.to);
+                    root.setProperty("--tint", cfg.ambient.mid);
+
+                    this.dom.domainTabsBar.querySelectorAll(".domain-tab").forEach((btn) => {
+                        const on = btn.getAttribute("data-domain-id") === domainId;
+                        btn.classList.toggle("is-active", on);
+                        btn.setAttribute("aria-selected", String(on));
+                        if (on) this.centerTab(btn, !(opts && opts.silent));
+                    });
+
+                    const eq = domainId === "gameaudio" ? '<span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>' : "";
+                    this.dom.activeDomainTag.innerHTML = `<span data-dyn-icon="${cfg.iconKey}" aria-hidden="true"></span><span>${cfg.code} · ${this.escapeHtml(cfg.label)}</span>${eq}`;
+                    this.dom.domainTitleText.textContent = cfg.title;
+                    this.dom.domainDescText.textContent = cfg.desc;
+                    this.dom.domainCodeLabel.textContent = `ATOM // ${cfg.code}`;
+                    this.dom.domainGuardrailRule.textContent = cfg.guardrailSummary;
+                    this.renderFacets();
+                    this.refreshIcons();
+                    this.autoPickStyle();
+                    this.updateAtomPreview();
+
+                    if (changed) {
+                        [this.dom.domainTitleText, this.dom.domainDescText, this.dom.facetsBox, this.dom.atomList].forEach((el) => this.restartAnim(el, "swap"));
+                        this.restartAnim(this.dom.activeDomainTag, "swap");
+                        if (!(opts && opts.silent)) {
+                            this.sound.play(domainId === "gameaudio" ? "chiptune" : "tap");
+                            this.haptic(8);
+                            this.persist();
+                        }
+                    }
+                }
+
+                centerTab(btn, smooth) {
+                    const bar = this.dom.domainTabsBar;
+                    if (bar.scrollWidth <= bar.clientWidth + 2) return;
+                    const left = btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2;
+                    bar.scrollTo({ left: Math.max(0, left), behavior: smooth && !prefersReduced() ? "smooth" : "auto" });
+                }
+
+                // ---------- 依領域自動挑選輸出格式 ----------
+                autoPickStyle() {
+                    const sel = this.dom.outputStyleSelect;
+                    if (!this.styleManual) {
+                        const opt = sel.options[DOMAIN_STYLE_INDEX[this.activeDomainId]];
+                        if (opt) sel.value = opt.value;
+                    }
+                    this.dom.styleAutoHint.textContent = this.styleManual ? "手動指定中，切換領域不會更動" : "已依領域自動選用，切換領域會自動調整";
+                    this.dom.styleAutoBtn.classList.toggle("hidden", !this.styleManual);
+                }
+
+                // ---------- 細部設定 ----------
+                renderFacets() {
+                    const defs = FACETS[this.activeDomainId] || [];
+                    const cfg = DOMAIN_CONFIGS[this.activeDomainId];
+                    this.dom.facetsBox.classList.toggle("hidden", !defs.length);
+                    if (!defs.length) { this.dom.facetsBody.innerHTML = ""; return; }
+                    this.dom.facetsTitle.textContent = `細部設定 · ${cfg.label}`;
+                    const sel = this.facetSel[this.activeDomainId] || {};
+                    this.dom.facetsBody.innerHTML = defs.map((f) => {
+                        const cur = sel[f.id] || [];
+                        const chips = f.options.map((o) => `<button type="button" class="chip" data-facet="${f.id}" data-value="${this.escapeHtml(o)}" aria-pressed="${cur.includes(o)}">${this.escapeHtml(o)}</button>`).join("");
+                        return `<div><div class="facet-label">${this.escapeHtml(f.label)}${f.multi ? "<small>可複選</small>" : ""}</div><div class="chip-row" role="group" aria-label="${this.escapeHtml(f.label)}">${chips}</div></div>`;
+                    }).join("");
+                }
+
+                toggleFacet(fid, val) {
+                    const defs = FACETS[this.activeDomainId] || [];
+                    const f = defs.find((x) => x.id === fid);
+                    if (!f) return;
+                    if (!this.facetSel[this.activeDomainId]) this.facetSel[this.activeDomainId] = {};
+                    const bag = this.facetSel[this.activeDomainId];
+                    let cur = bag[fid] || [];
+                    if (f.multi) cur = cur.includes(val) ? cur.filter((x) => x !== val) : cur.concat(val);
+                    else cur = cur[0] === val ? [] : [val];
+                    bag[fid] = cur;
+                    this.renderFacets();
+                    this.updateAtomPreview();
+                    this.sound.play("tap");
+                    this.haptic(6);
+                    this.persist();
+                }
+
+                getFacetPairs() {
+                    const defs = FACETS[this.activeDomainId] || [];
+                    const sel = this.facetSel[this.activeDomainId] || {};
+                    return defs.map((f) => ({ label: f.label, values: sel[f.id] || [] })).filter((p) => p.values.length);
+                }
+
+                getFacetValues(fid) {
+                    const sel = this.facetSel[this.activeDomainId] || {};
+                    return sel[fid] || [];
+                }
+
+                // ---------- 即時分解與完整度 ----------
+                updateAtomPreview() {
+                    const cfg = DOMAIN_CONFIGS[this.activeDomainId];
+                    const customRole = this.dom.customRoleInput.value.trim();
+                    const rawTask = this.dom.taskInput.value.trim();
+                    this.dom.atomRoleVal.textContent = customRole || cfg.defaultRole;
+                    this.dom.atomTaskVal.textContent = rawTask ? (rawTask.length > 52 ? rawTask.slice(0, 52) + "…" : rawTask) : "等待輸入任務目標...";
+                    this.dom.atomTaskVal.style.color = rawTask ? "var(--stone-900)" : "var(--stone-500)";
+                    const sOpt = this.dom.outputStyleSelect.selectedOptions[0];
+                    this.dom.atomFormatVal.textContent = sOpt ? sOpt.textContent : "";
+                    const facets = this.getFacetPairs().map((p) => p.values.join("／"));
+                    this.dom.atomGuardVal.textContent = cfg.guardrailSummary + (facets.length ? `　＋　${facets.join(" · ")}` : "");
+                    this.dom.taskCount.textContent = `${Array.from(this.dom.taskInput.value).length.toLocaleString()} 字`;
+                    this.updateScore();
+                }
+
+                computeScore() {
+                    const task = this.dom.taskInput.value.trim();
+                    const defs = FACETS[this.activeDomainId] || [];
+                    const sel = this.facetSel[this.activeDomainId] || {};
+                    const picked = defs.filter((f) => (sel[f.id] || []).length).length;
+                    const parts = [
+                        { w: 50, v: Math.min(1, Array.from(task).length / 80), hint: "把任務寫得更具體：目標、對象、情境與期望成果。" },
+                        { w: 10, v: this.dom.customRoleInput.value.trim() ? 1 : 0, hint: "在「專家參數」自訂角色，讓回答更貼近你要的專業。" },
+                        { w: 15, v: this.dom.extraConstraintsInput.value.trim() ? 1 : 0, hint: "補上額外限制，例如字數、風格、平台或禁忌。" },
+                        { w: 10, v: (this.uploadedImagePayload || this.uploadedDraftAttachment) ? 1 : 0, hint: "匯入參考草稿或圖片，提供更多上下文。" }
+                    ];
+                    if (defs.length) parts.push({ w: 15, v: picked / defs.length, hint: "在「細部設定」選好目標，生成結果會更精準。" });
+                    const total = parts.reduce((a, p) => a + p.w, 0);
+                    const score = Math.round(parts.reduce((a, p) => a + p.w * p.v, 0) / total * 100);
+                    let best = null, gap = 0;
+                    parts.forEach((p) => { const g = p.w * (1 - p.v); if (g > gap) { gap = g; best = p; } });
+                    return { score, hint: task ? (best ? best.hint : "太棒了，結構已相當完整。") : "輸入任務目標即可開始。" };
+                }
+
+                updateScore() {
+                    const { score, hint } = this.computeScore();
+                    const tier = score >= 85 ? 3 : score >= 60 ? 2 : score >= 30 ? 1 : 0;
+                    const names = ["待補充", "基礎成形", "品質良好", "專業級"];
+                    const C = 201.06;
+                    this.dom.scoreRingBar.style.strokeDashoffset = String(C * (1 - score / 100));
+                    this.dom.scoreCard.className = `score-card tier-${tier}`;
+                    this.dom.scoreTier.textContent = names[tier];
+                    this.dom.scoreHint.textContent = hint;
+                    this.tweenNumber(this.dom.scoreNum, this.lastScore, score);
+                    this.lastScore = score;
+                }
+
+                tweenNumber(el, from, to) {
+                    cancelAnimationFrame(this._tweenRaf);
+                    if (prefersReduced() || from === to) { el.textContent = String(to); return; }
+                    const t0 = performance.now(), dur = 450;
+                    const step = (now) => {
+                        const p = Math.min(1, (now - t0) / dur);
+                        el.textContent = String(Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))));
+                        if (p < 1) this._tweenRaf = requestAnimationFrame(step);
+                    };
+                    this._tweenRaf = requestAnimationFrame(step);
+                }
+
+                // ---------- 提示詞組裝 ----------
+                buildIconStylePromptBlock() {
+                    const found = ICON_STYLES.find((s) => s.id === this.selectedIconStyleId);
+                    if (!found) return "";
+                    return `\n# 介面與圖示／插圖視覺規範 (Icon & Illustration Spec)\n- **指定視覺風格**：${found.name} (${found.sub})\n- **設計執行標準**：${found.promptSpec}\n`;
+                }
+
+                needsPwa(rawTask) {
+                    if (this.pwaMode === "always") return true;
+                    if (this.pwaMode === "off") return false;
+                    const id = this.activeDomainId;
+                    if (id === "coding") {
+                        const p = this.getFacetValues("platform");
+                        return !p.length || p.some((x) => /網頁|PWA|Apps Script/.test(x));
+                    }
+                    if (id === "gameaudio") return this.getFacetValues("engine").some((x) => /Web/.test(x));
+                    if (id === "general" || id === "brainstorm" || id === "analysis") return /網頁|網站|web|app|應用|程式|工具|html|pwa|介面/i.test(rawTask);
+                    return false;
+                }
+
+                buildDefaultPwaPromptBlock() {
+                    return [
+                        "",
+                        "# PWA 漸進式網頁應用程式標準配置 (Default PWA Architecture Spec)",
+                        "- **獨立 APP 化規範**：若本次任務涉及網頁、系統工具、互動介面或應用程式開發，必須內建完整 PWA（Progressive Web App）設定，確保使用者可直接安裝至手機主畫面（iOS Safari 與 Android Chrome）或電腦桌面當成獨立 APP 執行（display: standalone）。",
+                        "- **必備技術實作細節**：",
+                        "  1. 頁面標頭（head 區塊）必須包含 viewport-fit=cover、theme-color、apple-mobile-web-app-capable=\"yes\"、apple-mobile-web-app-status-bar-style 與 apple-mobile-web-app-title 標籤。",
+                        "  2. 配置完整 Web App Manifest（包含 name、short_name、start_url、display: standalone 及桌面圖示），並在支援環境下註冊輕量離線快取 Service Worker。"
+                    ].join("\n");
+                }
+
+                buildFacetBlock() {
+                    const pairs = this.getFacetPairs();
+                    if (!pairs.length) return "";
+                    return ["", "# 專案規格 (Project Spec)", ...pairs.map((p) => `- **${p.label}**：${p.values.join("、")}`)].join("\n");
+                }
+
+                buildDraftAppendixBlock() {
+                    const parts = [];
+                    if (this.uploadedImagePayload) {
+                        parts.push(`\n# 參考圖片視覺附錄\n- 已附加參考圖片：${this.uploadedImagePayload.name}（請分析圖片中的排版、配色與結構細節並融入執行結果）。`);
+                    }
+                    if (this.uploadedDraftAttachment) {
+                        const safeContent = this.uploadedDraftAttachment.content.slice(0, 15000);
+                        parts.push(`\n# 附錄：原始草稿／程式碼參考檔案 (${this.uploadedDraftAttachment.name})\n\`\`\`\n${safeContent}\n\`\`\``);
+                    }
+                    return parts.join("\n");
+                }
+
+                hasInput() {
+                    return !!(this.dom.taskInput.value.trim() || this.uploadedDraftAttachment || this.uploadedImagePayload);
+                }
+
+                composePrompt(isAudited) {
+                    const rawTask = this.dom.taskInput.value.trim();
+                    const cfg = DOMAIN_CONFIGS[this.activeDomainId];
+                    const role = this.dom.customRoleInput.value.trim() || cfg.defaultRole;
+                    const style = this.dom.outputStyleSelect.value;
+                    const extra = this.dom.extraConstraintsInput.value.trim();
+                    const attName = this.uploadedDraftAttachment ? this.uploadedDraftAttachment.name : (this.uploadedImagePayload ? this.uploadedImagePayload.name : "");
+                    const cleanTask = rawTask || `請針對附錄檔案「${attName}」進行完整深度分析與優化升級。`;
+                    const extraBlock = extra ? `\n5. 額外指定限制條件：${extra}` : "";
+                    const auditHeader = isAudited ? `\n- 結構完整性：已通過 AI 查缺補漏校準，請主動補齊所有邊界條件與執行細節。` : "";
+                    const pwa = this.needsPwa(rawTask) ? this.buildDefaultPwaPromptBlock() : "";
+                    return [
+                        `# 角色設定 (Role)`,
+                        `你是一位${role}。`,
+                        ``,
+                        `# 核心任務目標 (Task Objective)`,
+                        cleanTask,
+                        this.buildFacetBlock(),
+                        ``,
+                        `# 輸出風格與結構規範 (Format & Tone)`,
+                        `- 呈現方式：${style}`,
+                        `- 語言要求：一律使用自然、精準且專業的「繁體中文」輸出。${auditHeader}${this.buildIconStylePromptBlock()}${pwa}`,
+                        ``,
+                        `# 領域專屬防呆護欄 (Domain Guardrails)`,
+                        `${cfg.guardrailDetails}${extraBlock}`,
+                        ``,
+                        `# 執行指令`,
+                        `請直接輸出高品質的最終執行成果，無需任何多餘的開場白或客套寒暄。${this.buildDraftAppendixBlock()}`
+                    ].join("\n").replace(/\n{3,}/g, "\n\n");
+                }
+
+                // ---------- 生成流程 ----------
+                setBusy(btn, busy, label) {
+                    if (busy) {
+                        btn.dataset.html = btn.innerHTML;
+                        btn.classList.add("is-busy");
+                        btn.innerHTML = `<span class="spinner" aria-hidden="true"></span><span>${label}</span>`;
+                    } else if (btn.dataset.html) {
+                        btn.innerHTML = btn.dataset.html;
+                        btn.classList.remove("is-busy");
+                        delete btn.dataset.html;
+                        this.refreshIcons(btn);
+                    }
+                }
+
+                requireInput() {
+                    if (this.hasInput()) return true;
+                    this.showToast("請先輸入任務內容，或匯入草稿／圖片！");
+                    this.sound.play("warn");
+                    this.haptic([10, 40, 10]);
+                    this.restartAnim(this.dom.taskInput, "swap");
+                    this.dom.taskInput.focus();
+                    return false;
+                }
+
+                async runAiAuditAndComplete() {
+                    if (!this.requireInput()) return;
+                    const cfg = DOMAIN_CONFIGS[this.activeDomainId];
+                    const rawTask = this.dom.taskInput.value.trim();
+                    const pairs = this.getFacetPairs();
+                    const items = [
+                        { ok: true, text: `已自動配對領域專家：「${this.dom.customRoleInput.value.trim() || cfg.defaultRole}」` },
+                        { ok: true, text: `已補全結構化輸出規範與「${cfg.guardrailSummary}」防呆護欄` },
+                        { ok: true, text: `已套用視覺標準：${this.dom.atomStyleVal.textContent}` }
+                    ];
+                    if (pairs.length) items.push({ ok: true, text: `已納入細部設定：${pairs.map((p) => `${p.label}＝${p.values.join("、")}`).join("；")}` });
+                    else if ((FACETS[this.activeDomainId] || []).length) items.push({ ok: false, text: "建議在「細部設定」補選目標，可讓結果更精準" });
+                    if (this.needsPwa(rawTask)) items.push({ ok: true, text: "已判斷為開發類任務，附加 PWA 獨立 APP 配置規範" });
+                    if (Array.from(rawTask).length < 20 && !this.uploadedDraftAttachment) items.push({ ok: false, text: "任務描述偏短，補充對象與期望成果能顯著提升品質" });
+
+                    this.dom.auditItemsList.innerHTML = items.map((it, i) =>
+                        `<div class="audit-item${it.ok ? "" : " is-tip"}" style="--i:${i}"><span class="mark">${it.ok ? "✓" : "＋"}</span><span>${this.escapeHtml(it.text)}</span></div>`).join("");
+                    this.dom.auditResultBox.classList.remove("hidden");
+                    this.restartAnim(this.dom.auditResultBox, "swap");
+                    await this.executeLaserSynthesis(true);
+                }
+
+                async executeLaserSynthesis(isAudited) {
+                    if (this._generating) return;
+                    if (!this.requireInput()) return;
+                    this._generating = true;
+                    const btn = this.dom.laserGenerateBtn;
+                    this.setBusy(btn, true, "掃描生成中…");
+                    this.setStatus("雷射掃描中…");
+                    this.sound.play("gen");
+                    this.haptic(10);
+                    try {
+                        await sleep(prefersReduced() ? 0 : 420);
+                        await this.streamResult(this.composePrompt(!!isAudited));
+                        this.setStatus("雷射掃描生成完成");
+                        this.sound.play("success");
+                        this.haptic([8, 30, 14]);
+                        if (!isAudited) this.showToast("⚡ 專業結構化提示詞已生成");
+                        if (window.matchMedia && window.matchMedia("(max-width: 919px)").matches) {
+                            this.dom.resultWrap.scrollIntoView({ behavior: prefersReduced() ? "auto" : "smooth", block: "center" });
+                        }
+                    } finally {
+                        this.setBusy(btn, false);
+                        this._generating = false;
+                    }
+                }
+
+                async streamResult(text) {
+                    const token = ++this.streamToken;
+                    const ta = this.dom.resultCode, wrap = this.dom.resultWrap;
+                    this._pendingText = text;
+                    wrap.classList.remove("is-done");
+                    if (prefersReduced()) { ta.value = text; this.updateOutStats(); return; }
+                    wrap.classList.add("is-streaming");
+                    const total = text.length, frames = 42;
+                    let i = 0;
+                    await new Promise((resolve) => {
+                        const step = () => {
+                            if (token !== this.streamToken) { resolve(); return; }
+                            i = Math.min(total, i + Math.ceil(total / frames));
+                            ta.value = text.slice(0, i);
+                            ta.scrollTop = ta.scrollHeight;
+                            this.updateOutStats();
+                            if (i >= total) resolve(); else requestAnimationFrame(step);
+                        };
+                        step();
+                    });
+                    if (token !== this.streamToken) return;
+                    ta.value = text;
+                    ta.scrollTop = 0;
+                    wrap.classList.remove("is-streaming");
+                    wrap.classList.add("is-done");
+                    setTimeout(() => wrap.classList.remove("is-done"), 950);
+                    this.updateOutStats();
+                }
+
+                skipStream() {
+                    if (!this.dom.resultWrap.classList.contains("is-streaming")) return;
+                    this.streamToken++;
+                    this.dom.resultCode.value = this._pendingText || this.dom.resultCode.value;
+                    this.dom.resultCode.scrollTop = 0;
+                    this.dom.resultWrap.classList.remove("is-streaming");
+                    this.updateOutStats();
+                }
+
+                estimateTokens(s) {
+                    let cjk = 0;
+                    for (const ch of s) { if (/[⺀-鿿가-힯＀-￯]/.test(ch)) cjk++; }
+                    const rest = s.length - cjk;
+                    return Math.round(cjk * 1.05 + rest / 3.6);
+                }
+
+                updateOutStats() {
+                    const v = this.dom.resultCode.value;
+                    if (!v.trim()) { this.dom.outStats.textContent = "尚未生成"; return; }
+                    const chars = Array.from(v).length;
+                    this.dom.outStats.innerHTML = `<span>${chars.toLocaleString()} 字元</span><span>約 ${this.estimateTokens(v).toLocaleString()} tokens</span><span>${v.split("\n").length} 行</span>`;
+                }
+
+                // ---------- 輸出動作 ----------
+                async copyText(text) {
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+                    } catch (e) { /* fallthrough */ }
+                    return this.copyTextFallback(text);
+                }
+
+                copyTextFallback(text) {
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    ta.setAttribute("readonly", "");
+                    ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+                    document.body.appendChild(ta);
+                    ta.select();
+                    ta.setSelectionRange(0, 999999);
+                    let ok = false;
+                    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+                    document.body.removeChild(ta);
+                    return ok;
+                }
+
+                async handleCopy() {
+                    this.skipStream();
+                    const text = this.dom.resultCode.value.trim();
+                    if (!text) { this.showToast("目前尚未生成提示詞可複製"); this.sound.play("warn"); return; }
+                    const ok = await this.copyText(text);
+                    if (!ok) { this.showToast("複製失敗，請長按文字手動複製"); return; }
+                    const btn = this.dom.opticalCopyBtn;
+                    btn.classList.add("is-done");
+                    this.dom.copyBtnIcon.setAttribute("data-dyn-icon", "check");
+                    this.refreshIcons(this.dom.copyBtnIcon);
+                    this.dom.copyBtnLabel.textContent = "已複製";
+                    this.showToast("📋 已複製完整專業提示詞");
+                    this.sound.play("success");
+                    this.haptic(12);
+                    clearTimeout(this._copyTimer);
+                    this._copyTimer = setTimeout(() => {
+                        btn.classList.remove("is-done");
+                        this.dom.copyBtnIcon.setAttribute("data-dyn-icon", "copy");
+                        this.refreshIcons(this.dom.copyBtnIcon);
+                        this.dom.copyBtnLabel.textContent = "一鍵複製";
+                    }, 1800);
+                }
+
+                downloadPrompt() {
+                    this.skipStream();
+                    const text = this.dom.resultCode.value.trim();
+                    if (!text) { this.showToast("請先生成提示詞再下載"); return; }
+                    const d = new Date(), p = (n) => String(n).padStart(2, "0");
+                    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+                    const blob = new Blob([text + "\n"], { type: "text/markdown;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `prompt-${this.activeDomainId}-${stamp}.md`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 2000);
+                    this.showToast("📥 已下載 Markdown 檔案");
+                }
+
+                async sharePrompt() {
+                    const text = this.dom.resultCode.value.trim();
+                    if (!text) { this.showToast("請先生成提示詞再分享"); return; }
+                    try { await navigator.share({ title: "AI 提示詞", text }); } catch (e) { /* 使用者取消 */ }
+                }
+
+                saveCurrentToVault() {
+                    this.skipStream();
+                    const code = this.dom.resultCode.value.trim();
+                    if (!code) { this.showToast("請先生成提示詞再收藏！"); this.sound.play("warn"); return; }
+                    const cfg = DOMAIN_CONFIGS[this.activeDomainId];
+                    const rawTask = this.dom.taskInput.value.trim() || "未命名提示詞";
+                    const short = Array.from(rawTask).slice(0, 28).join("");
+                    this.savedPrompts.unshift({
+                        id: "vault_" + Date.now(), domain: cfg.label,
+                        title: short + (Array.from(rawTask).length > 28 ? "…" : ""), prompt: code, ts: Date.now()
+                    });
+                    this.saveToStorage(STORE.vault, this.savedPrompts);
+                    this.renderVaultList();
+                    this.showToast("⭐ 已加入收藏庫");
+                    this.sound.play("success");
+                    this.haptic(10);
+                }
+
+                // ---------- 附件與匯入 ----------
+                refreshAttachmentBadge() {
+                    const names = [];
+                    if (this.uploadedImagePayload) names.push(`圖片：${this.uploadedImagePayload.name}`);
+                    if (this.uploadedDraftAttachment) names.push(`檔案：${this.uploadedDraftAttachment.name}（${this.uploadedDraftAttachment.content.length.toLocaleString()} 字）`);
+                    this.dom.attachmentBadge.classList.toggle("hidden", !names.length);
+                    this.dom.attachmentLabel.textContent = "已附加 · " + names.join("　");
+                    const img = this.dom.attachmentThumb;
+                    if (this.uploadedImagePayload && this.uploadedImagePayload.url) { img.src = this.uploadedImagePayload.url; img.classList.remove("hidden"); }
+                    else { img.removeAttribute("src"); img.classList.add("hidden"); }
+                    this.updateScore();
+                }
+
+                handleFile(file) {
+                    if (!file) return;
+                    if (file.type && file.type.indexOf("image/") === 0) {
+                        if (this.uploadedImagePayload && this.uploadedImagePayload.url) URL.revokeObjectURL(this.uploadedImagePayload.url);
+                        this.uploadedImagePayload = { name: file.name, size: file.size, url: URL.createObjectURL(file) };
+                        this.refreshAttachmentBadge();
+                        this.closeImport();
+                        this.showToast(`已載入圖片「${file.name}」`);
+                        this.sound.play("success");
+                        return;
+                    }
+                    if (file.size > 2 * 1024 * 1024) { this.showToast("檔案超過 2MB，請縮減後再試"); return; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        this.uploadedDraftAttachment = { name: file.name, content: String(ev.target.result || "") };
+                        this.refreshAttachmentBadge();
+                        this.closeImport();
+                        this.showToast(`已載入「${file.name}」，生成時將自動納入附錄`);
+                        this.sound.play("success");
+                    };
+                    reader.onerror = () => this.showToast("讀取檔案失敗，請確認為文字類檔案");
+                    reader.readAsText(file, "UTF-8");
+                }
+
+                clearAttachments() {
+                    if (this.uploadedImagePayload && this.uploadedImagePayload.url) URL.revokeObjectURL(this.uploadedImagePayload.url);
+                    this.uploadedImagePayload = null;
+                    this.uploadedDraftAttachment = null;
+                    this.dom.hiddenImageInput.value = "";
+                    this.dom.hiddenDocInput.value = "";
+                    this.refreshAttachmentBadge();
+                }
+
+                openImport() {
+                    this.dom.unifiedImportDrawer.classList.remove("hidden");
+                    this.restartAnim(this.dom.unifiedImportDrawer, "swap");
+                    this.dom.toggleImportBtn.setAttribute("aria-expanded", "true");
+                }
+                closeImport() {
+                    this.dom.unifiedImportDrawer.classList.add("hidden");
+                    this.dom.toggleImportBtn.setAttribute("aria-expanded", "false");
+                }
+
+                // ---------- 草稿庫與收藏庫 ----------
+                renderCloudDraftsList() {
+                    if (!this.cloudDrafts.length) { this.dom.cloudDraftsContainer.innerHTML = ""; return; }
+                    this.dom.cloudDraftsContainer.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--stone-500);margin-top:4px;">快速載入已存草稿</div>` +
+                        this.cloudDrafts.slice(0, 4).map((d) => `
+                            <div class="draft-row">
+                                <span class="t">${this.escapeHtml(d.title)}</span>
+                                <span class="flex-row" style="flex:none;">
+                                    <button type="button" data-draft-act="load" data-id="${d.id}" class="btn" style="padding:3px 10px;font-size:11px;min-height:28px;">載入</button>
+                                    <button type="button" data-draft-act="del" data-id="${d.id}" class="btn" style="padding:3px 9px;font-size:11px;min-height:28px;color:var(--rose-600);" aria-label="刪除草稿">✕</button>
+                                </span>
+                            </div>`).join("");
+                }
+
+                fmtTime(ts) {
+                    if (!ts) return "";
+                    const d = new Date(ts), p = (n) => String(n).padStart(2, "0");
+                    return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+                }
+
+                renderVaultList() {
+                    this.dom.vaultCountBadge.textContent = `${this.savedPrompts.length} 筆`;
+                    if (!this.savedPrompts.length) {
+                        this.dom.vaultItemsList.innerHTML = `<div class="empty-state"><div class="empty-ico" data-dyn-icon="star"></div><div>尚無收藏的提示詞<br>生成後點「收藏」，就會出現在這裡</div></div>`;
+                        this.refreshIcons(this.dom.vaultItemsList);
+                        return;
+                    }
+                    this.dom.vaultItemsList.innerHTML = this.savedPrompts.map((item) => {
+                        const open = this.expandedVault.has(item.id);
+                        return `<div class="vault-item">
+                            <div class="flex-between">
+                                <span style="font-size:11px;font-weight:700;color:var(--amber-600);">${this.escapeHtml(item.domain)}</span>
+                                <span class="vault-meta">${this.fmtTime(item.ts)}</span>
+                            </div>
+                            <div class="vault-title">${this.escapeHtml(item.title)}</div>
+                            ${open ? `<div class="vault-preview">${this.escapeHtml(item.prompt)}</div>` : ""}
+                            <div class="flex-row" style="flex-wrap:wrap;">
+                                <button type="button" data-vault-act="copy" data-id="${item.id}" class="btn" style="padding:3px 10px;font-size:11px;min-height:28px;">複製</button>
+                                <button type="button" data-vault-act="load" data-id="${item.id}" class="btn" style="padding:3px 10px;font-size:11px;min-height:28px;">載入編輯</button>
+                                <button type="button" data-vault-act="view" data-id="${item.id}" class="btn" style="padding:3px 10px;font-size:11px;min-height:28px;">${open ? "收起" : "預覽"}</button>
+                                <button type="button" data-vault-act="del" data-id="${item.id}" class="btn" style="padding:3px 10px;font-size:11px;min-height:28px;color:var(--rose-600);">刪除</button>
+                            </div>
+                        </div>`;
+                    }).join("");
+                }
+
+                async onVaultAction(act, id) {
+                    const idx = this.savedPrompts.findIndex((x) => x.id === id);
+                    if (idx < 0) return;
+                    const item = this.savedPrompts[idx];
+                    if (act === "copy") {
+                        const ok = await this.copyText(item.prompt);
+                        this.showToast(ok ? "📋 已複製收藏的提示詞" : "複製失敗，請改用「載入編輯」");
+                        if (ok) this.sound.play("success");
+                    } else if (act === "view") {
+                        if (this.expandedVault.has(id)) this.expandedVault.delete(id); else this.expandedVault.add(id);
+                        this.renderVaultList();
+                    } else if (act === "load") {
+                        this.streamToken++;
+                        this.dom.resultWrap.classList.remove("is-streaming");
+                        this.dom.resultCode.value = item.prompt;
+                        this.updateOutStats();
+                        this.closeLayer(this.dom.expertDrawerOverlay);
+                        this.showToast("已載入收藏內容，可直接微調");
+                        this.dom.resultWrap.scrollIntoView({ behavior: prefersReduced() ? "auto" : "smooth", block: "center" });
+                    } else if (act === "del") {
+                        this.savedPrompts.splice(idx, 1);
+                        this.saveToStorage(STORE.vault, this.savedPrompts);
+                        this.renderVaultList();
+                        this.sound.play("tap");
+                        this.showToast("已移除該筆收藏", {
+                            action: "復原",
+                            onAction: () => {
+                                this.savedPrompts.splice(Math.min(idx, this.savedPrompts.length), 0, item);
+                                this.saveToStorage(STORE.vault, this.savedPrompts);
+                                this.renderVaultList();
+                            }
+                        });
+                    }
+                }
+
+                onDraftAction(act, id) {
+                    const idx = this.cloudDrafts.findIndex((x) => x.id === id);
+                    if (idx < 0) return;
+                    const d = this.cloudDrafts[idx];
+                    if (act === "load") {
+                        this.dom.taskInput.value = d.content;
+                        this.autosize(this.dom.taskInput);
+                        this.updateAtomPreview();
+                        this.persist();
+                        this.closeImport();
+                        this.showToast("已載入草稿內容");
+                    } else {
+                        this.cloudDrafts.splice(idx, 1);
+                        this.saveToStorage(STORE.drafts, this.cloudDrafts);
+                        this.renderCloudDraftsList();
+                        this.showToast("已刪除草稿", {
+                            action: "復原",
+                            onAction: () => {
+                                this.cloudDrafts.splice(Math.min(idx, this.cloudDrafts.length), 0, d);
+                                this.saveToStorage(STORE.drafts, this.cloudDrafts);
+                                this.renderCloudDraftsList();
+                            }
+                        });
+                    }
+                }
+
+                resetWorkspace() {
+                    const snap = {
+                        task: this.dom.taskInput.value, result: this.dom.resultCode.value, role: this.dom.customRoleInput.value,
+                        extra: this.dom.extraConstraintsInput.value, img: this.uploadedImagePayload, doc: this.uploadedDraftAttachment
+                    };
+                    const nothing = !snap.task && !snap.result && !snap.role && !snap.extra && !snap.img && !snap.doc;
+                    this.streamToken++;
+                    this.dom.resultWrap.classList.remove("is-streaming");
+                    this.dom.taskInput.value = "";
+                    this.dom.resultCode.value = "";
+                    this.dom.customRoleInput.value = "";
+                    this.dom.extraConstraintsInput.value = "";
+                    this.uploadedImagePayload = null;
+                    this.uploadedDraftAttachment = null;
+                    this.dom.hiddenImageInput.value = "";
+                    this.dom.hiddenDocInput.value = "";
+                    this.refreshAttachmentBadge();
+                    this.dom.auditResultBox.classList.add("hidden");
+                    this.autosize(this.dom.taskInput);
+                    this.updateAtomPreview();
+                    this.updateOutStats();
+                    this.persist();
+                    this.sound.play("tap");
+                    if (nothing) { this.showToast("工作台已是乾淨狀態"); return; }
+                    this.showToast("已重置工作台", {
+                        action: "復原",
+                        onAction: () => {
+                            this.dom.taskInput.value = snap.task;
+                            this.dom.resultCode.value = snap.result;
+                            this.dom.customRoleInput.value = snap.role;
+                            this.dom.extraConstraintsInput.value = snap.extra;
+                            this.uploadedImagePayload = snap.img;
+                            this.uploadedDraftAttachment = snap.doc;
+                            this.refreshAttachmentBadge();
+                            this.autosize(this.dom.taskInput);
+                            this.updateAtomPreview();
+                            this.updateOutStats();
+                            this.persist();
+                        }
+                    });
+                }
+
+                // ---------- 對話層（抽屜／視窗）與無障礙 ----------
+                openLayer(el) {
+                    if (!el.classList.contains("hidden")) return;
+                    this._lastFocus = document.activeElement;
+                    el.classList.remove("hidden", "is-closing");
+                    this.layerStack.push(el);
+                    document.body.style.overflow = "hidden";
+                    setTimeout(() => {
+                        const f = el.querySelector("[data-autofocus]") || el.querySelector("input,select,button,textarea");
+                        if (f) f.focus({ preventScroll: true });
+                    }, 80);
+                    this.sound.play("tap");
+                }
+
+                closeLayer(el) {
+                    if (el.classList.contains("hidden")) return;
+                    el.classList.add("is-closing");
+                    this.layerStack = this.layerStack.filter((x) => x !== el);
+                    setTimeout(() => {
+                        el.classList.add("hidden");
+                        el.classList.remove("is-closing");
+                    }, prefersReduced() ? 0 : 200);
+                    if (!this.layerStack.length) document.body.style.overflow = "";
+                    if (this._lastFocus && this._lastFocus.focus) { try { this._lastFocus.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ } }
+                }
+
+                trapFocus(e) {
+                    const top = this.layerStack[this.layerStack.length - 1];
+                    if (!top || e.key !== "Tab") return;
+                    const f = Array.from(top.querySelectorAll('button,input,select,textarea,[href],[tabindex]:not([tabindex="-1"])')).filter((x) => !x.disabled && x.offsetParent !== null);
+                    if (!f.length) return;
+                    const first = f[0], last = f[f.length - 1];
+                    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+
+                haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) { /* 忽略 */ } }
+
+                autosize(ta) {
+                    ta.style.height = "auto";
+                    ta.style.height = Math.min(Math.max(ta.scrollHeight + 2, 112), 360) + "px";
+                }
+
+                // ---------- 事件 ----------
+                bindEvents() {
+                    const d = this.dom;
+                    const onInput = () => { this.updateAtomPreview(); this.persist(); };
+                    d.taskInput.addEventListener("input", () => { this.autosize(d.taskInput); onInput(); });
+                    d.customRoleInput.addEventListener("input", onInput);
+                    d.extraConstraintsInput.addEventListener("input", onInput);
+                    d.outputStyleSelect.addEventListener("change", () => { this.styleManual = true; this.autoPickStyle(); onInput(); });
+                    d.styleAutoBtn.addEventListener("click", () => {
+                        this.styleManual = false;
+                        this.autoPickStyle();
+                        this.updateAtomPreview();
+                        this.persist();
+                        this.showToast("已恢復依領域自動選擇輸出格式");
+                    });
+                    d.resultCode.addEventListener("input", () => this.updateOutStats());
+                    d.resultWrap.addEventListener("click", () => this.skipStream());
+
+                    // 領域分頁（事件委派）
+                    d.domainTabsBar.addEventListener("click", (e) => {
+                        const b = e.target.closest(".domain-tab");
+                        if (b) this.applyDomainContext(b.getAttribute("data-domain-id"));
+                    });
+                    d.domainTabsBar.addEventListener("keydown", (e) => {
+                        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                        const ids = Object.keys(DOMAIN_CONFIGS);
+                        const i = ids.indexOf(this.activeDomainId);
+                        const n = ids[(i + (e.key === "ArrowRight" ? 1 : ids.length - 1)) % ids.length];
+                        this.applyDomainContext(n);
+                        const nb = d.domainTabsBar.querySelector(`[data-domain-id="${n}"]`);
+                        if (nb) nb.focus();
+                    });
+
+                    // 風格卡片
+                    d.iconStyleGrid.addEventListener("click", (e) => {
+                        const card = e.target.closest(".icon-style-card");
+                        if (!card) return;
+                        const id = card.getAttribute("data-style-id");
+                        this.selectedIconStyleId = this.selectedIconStyleId === id ? null : id;
+                        this.renderIconStyleCards();
+                        this.refreshIcons();
+                        const chosen = ICON_STYLES.find((s) => s.id === this.selectedIconStyleId);
+                        this.showToast(chosen ? `全站圖示已切換為「${chosen.name}」並寫入提示詞規範` : "已取消指定圖示風格");
+                        this.sound.play("toggle");
+                        this.persist();
+                    });
+
+                    // 細部設定
+                    d.facetsBody.addEventListener("click", (e) => {
+                        const c = e.target.closest(".chip");
+                        if (c) this.toggleFacet(c.dataset.facet, c.dataset.value);
+                    });
+
+                    d.fillExampleBtn.addEventListener("click", () => {
+                        d.taskInput.value = DOMAIN_CONFIGS[this.activeDomainId].example;
+                        this.autosize(d.taskInput);
+                        this.updateAtomPreview();
+                        this.restartAnim(d.taskInput, "swap");
+                        this.persist();
+                        this.sound.play("tap");
+                        this.showToast("已填入該領域精選範例");
+                    });
+                    d.resetAllBtn.addEventListener("click", () => this.resetWorkspace());
+
+                    // 匯入
+                    d.toggleImportBtn.addEventListener("click", () => {
+                        if (d.unifiedImportDrawer.classList.contains("hidden")) this.openImport(); else this.closeImport();
+                    });
+                    d.closeImportBtn.addEventListener("click", () => this.closeImport());
+                    d.pickImageBtn.addEventListener("click", () => d.hiddenImageInput.click());
+                    d.pickFileBtn.addEventListener("click", () => d.hiddenDocInput.click());
+                    d.hiddenImageInput.addEventListener("change", (e) => this.handleFile(e.target.files && e.target.files[0]));
+                    d.hiddenDocInput.addEventListener("change", (e) => this.handleFile(e.target.files && e.target.files[0]));
+                    d.clearAttachmentBtn.addEventListener("click", () => { this.clearAttachments(); this.showToast("已移除附加檔案"); });
+                    d.saveCloudDraftBtn.addEventListener("click", () => {
+                        const text = d.taskInput.value.trim();
+                        if (!text) { this.showToast("請先在輸入框寫下草稿內容再存入草稿庫！"); this.sound.play("warn"); return; }
+                        const chars = Array.from(text);
+                        this.cloudDrafts.unshift({ id: "draft_" + Date.now(), title: chars.slice(0, 22).join("") + (chars.length > 22 ? "…" : ""), content: text });
+                        this.saveToStorage(STORE.drafts, this.cloudDrafts);
+                        this.renderCloudDraftsList();
+                        this.showToast("☁️ 已存入本機草稿庫");
+                        this.sound.play("success");
+                    });
+                    d.cloudDraftsContainer.addEventListener("click", (e) => {
+                        const b = e.target.closest("[data-draft-act]");
+                        if (b) this.onDraftAction(b.dataset.draftAct, b.dataset.id);
+                    });
+
+                    // 拖放匯入
+                    const card = d.workspaceLeft;
+                    let dragDepth = 0;
+                    const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+                    card.addEventListener("dragenter", (e) => { if (hasFiles(e)) { e.preventDefault(); dragDepth++; card.classList.add("is-dragover"); } });
+                    card.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+                    card.addEventListener("dragleave", () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) card.classList.remove("is-dragover"); });
+                    card.addEventListener("drop", (e) => {
+                        if (!hasFiles(e)) return;
+                        e.preventDefault();
+                        dragDepth = 0;
+                        card.classList.remove("is-dragover");
+                        this.handleFile(e.dataTransfer.files && e.dataTransfer.files[0]);
+                    });
+                    window.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+                    window.addEventListener("drop", (e) => { if (hasFiles(e)) e.preventDefault(); });
+
+                    // 生成與輸出
+                    d.aiAuditBtn.addEventListener("click", () => this.runAiAuditAndComplete());
+                    d.laserGenerateBtn.addEventListener("click", () => this.executeLaserSynthesis(false));
+                    d.closeAuditBtn.addEventListener("click", () => d.auditResultBox.classList.add("hidden"));
+                    d.opticalCopyBtn.addEventListener("click", () => this.handleCopy());
+                    d.saveToVaultBtn.addEventListener("click", () => this.saveCurrentToVault());
+                    d.downloadBtn.addEventListener("click", () => this.downloadPrompt());
+                    d.shareBtn.addEventListener("click", () => this.sharePrompt());
+
+                    // 抽屜與設定
+                    d.toggleDrawerBtn.addEventListener("click", () => this.openLayer(d.expertDrawerOverlay));
+                    d.closeMobileDrawerBtn.addEventListener("click", () => this.closeLayer(d.expertDrawerOverlay));
+                    d.expertDrawerOverlay.addEventListener("click", (e) => { if (e.target === d.expertDrawerOverlay) this.closeLayer(d.expertDrawerOverlay); });
+                    d.vaultItemsList.addEventListener("click", (e) => {
+                        const b = e.target.closest("[data-vault-act]");
+                        if (b) this.onVaultAction(b.dataset.vaultAct, b.dataset.id);
+                    });
+                    d.themeToggleBtn.addEventListener("click", () => {
+                        const order = ["auto", "light", "dark"];
+                        this.setThemeMode(order[(order.indexOf(this.themeMode) + 1) % order.length]);
+                    });
+                    d.themeSeg.addEventListener("click", (e) => {
+                        const b = e.target.closest("[data-theme-mode]");
+                        if (b) this.setThemeMode(b.dataset.themeMode, true);
+                    });
+                    d.soundSwitch.addEventListener("click", () => {
+                        this.soundOn = !this.soundOn;
+                        this.syncSettingsUi();
+                        this.sound.play("toggle");
+                        this.persist();
+                        this.showToast(this.soundOn ? "🔊 介面音效已開啟" : "🔇 介面音效已關閉");
+                    });
+                    d.pwaModeSelect.addEventListener("change", () => { this.pwaMode = d.pwaModeSelect.value; this.persist(); });
+
+                    // PWA
+                    d.installPwaBtn.addEventListener("click", () => this.handlePwaInstallClick());
+                    d.closePwaModalBtn.addEventListener("click", () => this.closeLayer(d.pwaInstallGuideModal));
+                    d.confirmPwaModalBtn.addEventListener("click", () => this.closeLayer(d.pwaInstallGuideModal));
+                    d.pwaInstallGuideModal.addEventListener("click", (e) => { if (e.target === d.pwaInstallGuideModal) this.closeLayer(d.pwaInstallGuideModal); });
+
+                    d.voiceInputBtn.addEventListener("click", () => this.toggleVoiceInput());
+
+                    // Toast 動作
+                    d.toastAction.addEventListener("click", () => {
+                        const fn = this._toastHandler;
+                        this._toastHandler = null;
+                        d.globalToast.classList.remove("is-visible");
+                        if (fn) fn();
+                    });
+
+                    // 全域快捷鍵
+                    document.addEventListener("keydown", (e) => {
+                        if (e.key === "Escape" && this.layerStack.length) { this.closeLayer(this.layerStack[this.layerStack.length - 1]); return; }
+                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); this.executeLaserSynthesis(false); return; }
+                        this.trapFocus(e);
+                    });
+
+                    // 捲動陰影
+                    const onScroll = () => d.appHeader.classList.toggle("is-scrolled", window.scrollY > 6);
+                    window.addEventListener("scroll", onScroll, { passive: true });
+                    onScroll();
+                    const flush = () => { clearTimeout(this._persistTimer); this.saveToStorage(STORE.state, this.snapshotState()); };
+                    window.addEventListener("beforeunload", flush);
+                    window.addEventListener("pagehide", flush);
+                    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+                }
+
+                // ---------- 語音 ----------
+                setupSpeechRecognition() {
+                    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (!SpeechRec) return;
+                    try {
+                        this.speechRecognition = new SpeechRec();
+                        this.speechRecognition.lang = "zh-TW";
+                        this.speechRecognition.interimResults = false;
+                        this.speechRecognition.onresult = (event) => {
+                            const transcript = event.results[0][0].transcript;
+                            this.dom.taskInput.value = (this.dom.taskInput.value + " " + transcript).trim();
+                            this.autosize(this.dom.taskInput);
+                            this.updateAtomPreview();
+                            this.persist();
+                            this.showToast("🎙️ 語音已轉為文字");
+                        };
+                        const stop = () => {
+                            this.isListeningVoice = false;
+                            this.dom.voiceBtnLabel.textContent = "語音口述";
+                            this.dom.voiceInputBtn.classList.remove("is-listening");
+                        };
+                        this.speechRecognition.onend = stop;
+                        this.speechRecognition.onerror = () => { stop(); this.showToast("無法使用麥克風，請確認瀏覽器權限"); };
+                    } catch (e) { /* 忽略 */ }
+                }
+
+                toggleVoiceInput() {
+                    if (!this.speechRecognition) { this.showToast("目前瀏覽器不支援語音輸入，請直接打字或使用手機鍵盤語音"); return; }
+                    if (this.isListeningVoice) { this.speechRecognition.stop(); return; }
+                    try {
+                        this.isListeningVoice = true;
+                        this.dom.voiceBtnLabel.textContent = "聆聽中…";
+                        this.dom.voiceInputBtn.classList.add("is-listening");
+                        this.speechRecognition.start();
+                    } catch (e) { this.isListeningVoice = false; this.dom.voiceInputBtn.classList.remove("is-listening"); }
+                }
+
+                // ---------- PWA ----------
+                initPwa() {
+                    window.addEventListener("beforeinstallprompt", (e) => {
+                        e.preventDefault();
+                        this.deferredInstallPrompt = e;
+                        this.dom.installPwaBtnText.textContent = "一鍵安裝";
+                    });
+                    window.addEventListener("appinstalled", () => { this.deferredInstallPrompt = null; this.showToast("🎉 已安裝到你的裝置"); });
+                    try {
+                        const standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone;
+                        if (standalone) this.dom.installPwaBtn.classList.add("hidden");
+                    } catch (e) { /* 忽略 */ }
+                    this.buildAppIcons();
+                }
+
+                // 以 Canvas 即時繪製 App 圖示（apple-touch-icon／manifest），無需外部圖檔
+                buildAppIcons() {
+                    try {
+                        const size = 512, c = document.createElement("canvas");
+                        c.width = c.height = size;
+                        const g = c.getContext("2d");
+                        const grad = g.createLinearGradient(0, 0, size, size);
+                        grad.addColorStop(0, "#292524"); grad.addColorStop(1, "#1c1917");
+                        g.fillStyle = grad; g.fillRect(0, 0, size, size);
+                        const glow = g.createRadialGradient(size * .5, size * .45, 10, size * .5, size * .45, size * .55);
+                        glow.addColorStop(0, "rgba(245,158,11,.38)"); glow.addColorStop(1, "rgba(245,158,11,0)");
+                        g.fillStyle = glow; g.fillRect(0, 0, size, size);
+                        g.save();
+                        g.translate(size * .22, size * .22);
+                        g.scale((size * .56) / 24, (size * .56) / 24);
+                        const p = new Path2D("m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z");
+                        g.fillStyle = "#f59e0b"; g.fill(p);
+                        g.lineWidth = .9; g.strokeStyle = "#fde68a"; g.lineJoin = "round"; g.stroke(p);
+                        g.restore();
+                        const png = c.toDataURL("image/png");
+                        const setLink = (rel, href, sizes) => {
+                            let l = document.querySelector(`link[rel="${rel}"]`);
+                            if (!l) { l = document.createElement("link"); l.rel = rel; document.head.appendChild(l); }
+                            l.href = href; if (sizes) l.setAttribute("sizes", sizes);
+                        };
+                        setLink("apple-touch-icon", png, "512x512");
+                        setLink("icon", png);
+                        if (/^https?:$/.test(location.protocol)) {
+                            const manifest = {
+                                name: "AI 提示詞引擎", short_name: "提示詞引擎", start_url: location.href.split("#")[0], scope: location.href.split("#")[0].replace(/[^/]*$/, ""),
+                                display: "standalone", background_color: "#100e0d", theme_color: "#1c1917", lang: "zh-TW",
+                                icons: [{ src: png, sizes: "512x512", type: "image/png", purpose: "any" }]
+                            };
+                            const url = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }));
+                            setLink("manifest", url);
+                        }
+                    } catch (e) { /* 圖示建立失敗不影響主要功能 */ }
+                }
+
+                async handlePwaInstallClick() {
+                    if (this.deferredInstallPrompt) {
+                        try {
+                            this.deferredInstallPrompt.prompt();
+                            await this.deferredInstallPrompt.userChoice;
+                            this.deferredInstallPrompt = null;
+                            return;
+                        } catch (e) { /* 改顯示說明 */ }
+                    }
+                    this.openLayer(this.dom.pwaInstallGuideModal);
+                }
+
+                // ---------- 通用 ----------
+                loadFromStorage(key, fallback) {
+                    try {
+                        const raw = localStorage.getItem(key);
+                        return raw ? JSON.parse(raw) : fallback;
+                    } catch (e) { return fallback; }
+                }
+
+                saveToStorage(key, val) {
+                    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* 忽略 */ }
+                }
+
+                showToast(msg, opts) {
+                    opts = opts || {};
+                    const d = this.dom;
+                    d.toastMsg.textContent = msg;
+                    d.toastAction.hidden = !opts.action;
+                    d.toastAction.textContent = opts.action || "";
+                    this._toastHandler = opts.onAction || null;
+                    d.globalToast.classList.add("is-visible");
+                    clearTimeout(this._toastTimer);
+                    this._toastTimer = setTimeout(() => d.globalToast.classList.remove("is-visible"), opts.action ? 5500 : 2500);
+                }
+
+                escapeHtml(str) {
+                    return String(str == null ? "" : str)
+                        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+                }
+            }
+
+            const boot = () => { window.__promptApp = new PromptStudioApp(); };
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+
+        })();
+    </script>
+</body>
+</html>
