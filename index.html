@@ -12,6 +12,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="AI 提示詞引擎">
     <title>AI 提示詞引擎</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-512.png">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c1917'/%3E%3Cpath d='M32 10l4.5 15.5L52 32l-15.5 6.5L32 54l-4.5-15.5L12 32l15.5-6.5z' fill='%23f59e0b'/%3E%3C/svg%3E">
     <script>
         /* 於首次繪製前套用外觀，避免深色模式閃白 */
@@ -2813,6 +2815,7 @@
 
                 // ---------- PWA ----------
                 initPwa() {
+                    this.registerServiceWorker();
                     window.addEventListener("beforeinstallprompt", (e) => {
                         e.preventDefault();
                         this.deferredInstallPrompt = e;
@@ -2826,8 +2829,32 @@
                     this.buildAppIcons();
                 }
 
+                // 註冊 Service Worker（離線使用 + 新版本提示）；僅在 http(s) 下運作
+                registerServiceWorker() {
+                    if (!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
+                    let reloading = false;
+                    navigator.serviceWorker.addEventListener("controllerchange", () => {
+                        if (reloading) return;
+                        reloading = true;
+                        location.reload();
+                    });
+                    navigator.serviceWorker.register("sw.js").then((reg) => {
+                        const ask = (worker) => this.showToast("有新版本可用", { action: "立即更新", onAction: () => worker.postMessage("SKIP_WAITING") });
+                        if (reg.waiting && navigator.serviceWorker.controller) ask(reg.waiting);
+                        reg.addEventListener("updatefound", () => {
+                            const w = reg.installing;
+                            if (!w) return;
+                            w.addEventListener("statechange", () => {
+                                if (w.state === "installed" && navigator.serviceWorker.controller) ask(w);
+                            });
+                        });
+                        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+                    }).catch(() => { /* 註冊失敗不影響使用 */ });
+                }
+
                 // 以 Canvas 即時繪製 App 圖示（apple-touch-icon／manifest），無需外部圖檔
                 buildAppIcons() {
+                    if (document.querySelector('link[rel="manifest"]')) return;
                     try {
                         const size = 512, c = document.createElement("canvas");
                         c.width = c.height = size;
