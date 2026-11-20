@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>安裝 AI 提示詞引擎</title>
+<style>
+:root{--bg:#fafaf9;--card:#fff;--ink:#1c1917;--mute:#78716c;--line:#e7e5e4;--amber:#d97706;--amberbg:#fffbeb}
+@media (prefers-color-scheme:dark){:root{--bg:#100e0d;--card:#1c1917;--ink:#f5f5f4;--mute:#a8a29e;--line:#34302d;--amber:#f59e0b;--amberbg:rgba(245,158,11,.1)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.6;padding:24px 16px calc(32px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 14px 32px -16px rgba(0,0,0,.18)}
+h1{margin:0 0 4px;font-size:22px;letter-spacing:-.01em}
+h2{margin:0 0 10px;font-size:15px}
+p{margin:0;color:var(--mute);font-size:13.5px}
+.hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.qr{width:190px;height:190px;padding:12px;background:#fff;border-radius:18px;border:1px solid var(--line);flex:none;margin:0 auto}
+.qr svg{width:100%;height:100%;display:block}
+.hero-text{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
+.url{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all;background:var(--amberbg);border:1px solid var(--line);border-radius:12px;padding:8px 10px;color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:active{transform:scale(.97)}
+ol{margin:0;padding-left:20px;color:var(--mute);font-size:13.5px;display:flex;flex-direction:column;gap:5px}
+ol b{color:var(--ink)}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:var(--amber);background:var(--amberbg);border-radius:999px;padding:2px 10px;margin-bottom:8px}
+@media print{body{background:#fff;color:#000}.btn,.row{display:none}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="card hero">
+    <div class="qr"><svg role="img" aria-label="安裝 QR Code"  viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#1c1917" d="M2 2.5h7m1 0h4m2 0h2m1 0h3m2 0h2m2 0h7m-33 1h1m5 0h1m2 0h1m1 0h1m4 0h1m1 0h1m2 0h1m1 0h2m1 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m5 0h4m1 0h2m1 0h2m2 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h4m5 0h2m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m2 0h4m5 0h1m1 0h1m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h1m3 0h1m1 0h1m2 0h3m1 0h2m3 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h2m1 0h2m1 0h2m1 0h2m1 0h4m-23 1h1m1 0h1m1 0h9m7 0h1m1 0h5m1 0h2m1 0h1m-33 1h1m2 0h2m5 0h1m1 0h1m4 0h1m4 0h1m1 0h4m4 0h1m-33 1h4m1 0h2m3 0h2m2 0h1m3 0h2m2 0h1m1 0h1m2 0h2m1 0h1m1 0h1m-33 1h3m4 0h2m1 0h3m3 0h1m4 0h2m5 0h2m1 0h2m-33 1h3m1 0h1m1 0h1m1 0h1m3 0h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h2m2 0h1m-30 1h4m1 0h1m2 0h6m2 0h1m2 0h4m1 0h5m2 0h2m-33 1h1m2 0h5m1 0h1m2 0h3m2 0h1m5 0h1m1 0h3m2 0h2m-32 1h6m2 0h1m2 0h2m3 0h1m1 0h1m1 0h5m1 0h1m1 0h1m2 0h1m-28 1h1m1 0h2m2 0h1m1 0h2m2 0h2m2 0h2m1 0h2m1 0h1m1 0h1m2 0h1m-31 1h3m1 0h1m1 0h2m3 0h7m2 0h1m1 0h3m1 0h1m1 0h1m1 0h1m-30 1h1m1 0h5m1 0h1m3 0h5m5 0h1m1 0h1m3 0h3m-33 1h4m3 0h1m3 0h2m1 0h2m1 0h5m1 0h2m2 0h1m-27 1h1m1 0h1m2 0h2m1 0h2m1 0h5m1 0h2m1 0h1m1 0h3m5 0h1m-31 1h1m1 0h3m1 0h3m1 0h4m1 0h3m1 0h1m3 0h1m1 0h1m2 0h1m1 0h2m-33 1h4m2 0h3m1 0h2m1 0h1m5 0h1m2 0h1m4 0h1m4 0h1m-32 1h1m5 0h2m7 0h1m1 0h7m1 0h3m3 0h1m-33 1h1m2 0h2m1 0h1m3 0h3m2 0h2m2 0h3m1 0h6m2 0h1m-24 1h3m2 0h1m4 0h3m3 0h1m3 0h2m1 0h2m-33 1h7m1 0h3m1 0h1m1 0h3m4 0h1m2 0h1m1 0h1m1 0h4m-32 1h1m5 0h1m1 0h1m1 0h1m1 0h1m4 0h1m3 0h1m2 0h1m3 0h1m-29 1h1m1 0h3m1 0h1m2 0h1m4 0h1m2 0h1m1 0h4m1 0h6m1 0h1m-32 1h1m1 0h3m1 0h1m1 0h4m2 0h3m4 0h1m1 0h1m2 0h1m1 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h1m3 0h1m1 0h1m3 0h1m1 0h1m3 0h1m3 0h1m-33 1h1m5 0h1m1 0h5m2 0h1m1 0h8m-25 1h7m2 0h1m1 0h2m3 0h1m3 0h2m2 0h1m1 0h1m1 0h2m1 0h1"/></svg></div>
+    <div class="hero-text">
+      <div>
+        <h1>安裝 AI 提示詞引擎</h1>
+        <p>用手機相機掃描 QR Code，開啟後依下方步驟加入主畫面，就能像 APP 一樣全螢幕使用。</p>
+      </div>
+      <div id="url" class="url">https://mathedu-prog.github.io/prompt-engine/</div>
+      <div class="row">
+        <button id="copy" class="btn primary" type="button">複製連結</button>
+        <a class="btn" href="./">直接開啟</a>
+        <button class="btn" type="button" onclick="window.print()">列印此頁</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <span class="tag">iPhone / iPad</span>
+    <h2>用 Safari 加入主畫面</h2>
+    <ol>
+      <li>用 <b>Safari</b> 掃描 QR Code 並開啟網頁（Chrome 不支援加入主畫面）。</li>
+      <li>點底部工具列的 <b>分享</b> 圖示（方框加向上箭頭）。</li>
+      <li>往下滑，選 <b>加入主畫面</b>。</li>
+      <li>確認名稱後按右上角 <b>新增</b>，桌面就會出現 APP 圖示。</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <span class="tag">Android</span>
+    <h2>用 Chrome 安裝</h2>
+    <ol>
+      <li>用 <b>Chrome</b> 掃描 QR Code 並開啟網頁。</li>
+      <li>點右上角 <b>⋮</b> 選單。</li>
+      <li>選 <b>安裝應用程式</b>（或 <b>加到主畫面</b>）。</li>
+      <li>按 <b>安裝</b>，之後從桌面或應用程式列表開啟。</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <span class="tag">電腦 Windows / Mac</span>
+    <h2>用 Chrome 或 Edge 安裝</h2>
+    <ol>
+      <li>開啟網頁後，點網址列右側的 <b>安裝</b> 圖示。</li>
+      <li>在跳出的視窗按 <b>安裝</b>。</li>
+      <li>之後會以獨立視窗開啟，可釘選到工作列。</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>小提醒</h2>
+    <p>草稿、收藏與設定只儲存在各自裝置的瀏覽器裡，不會上傳也不會跨裝置同步；清除網站資料會一併消失。更新版本發布後，重新整理或重新開啟 APP 即可使用新版。</p>
+  </section>
+</main>
+<script>
+document.getElementById("copy").addEventListener("click", function () {
+  var btn = this, t = document.getElementById("url").textContent.trim();
+  var done = function () { btn.textContent = "已複製 ✓"; setTimeout(function () { btn.textContent = "複製連結"; }, 1800); };
+  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t).then(done, done); }
+  else { var a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch (e) {} a.remove(); done(); }
+});
+</script>
+</body>
+</html>
